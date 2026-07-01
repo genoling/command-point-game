@@ -1,1962 +1,1755 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>博弈论：律政与代码 | 实时同步 V3.5</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <title>博弈论：律政与代码 | 实时同步 V3.5.3</title>
+    <!-- 引入 Tailwind CSS 提升 UI 渲染效率 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 字体图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase App 与 Database 核心 SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; padding: 14px; margin: 0; max-width: 640px; margin: 0 auto; }
-        .header { text-align: center; padding: 8px 0 12px; }
-        .header h1 { margin: 0; font-size: 19px; color: #1a1a2e; }
-        .header p { margin: 4px 0 0; font-size: 11px; color: #888; }
-
-        /* 房间面板 */
-        .room-panel { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px; border-radius: 12px; margin-bottom: 12px; }
-        .room-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; }
-        .room-id { font-weight: 600; font-size: 14px; letter-spacing: 1px; }
-        .room-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-        .room-dot.offline { background: #f87171; animation: none; }
-        .room-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-        .room-btn { flex: 1; min-width: 70px; padding: 8px 4px; border: none; border-radius: 7px; background: rgba(255,255,255,0.2); color: white; font-size: 11px; cursor: pointer; font-weight: 500; }
-        .room-btn:active { background: rgba(255,255,255,0.35); }
-        .room-btn.green { background: #22c55e; }
-        .room-btn.orange { background: #f97316; }
-        .room-btn.cyan { background: #06b6d4; }
-        .room-tip { font-size: 11px; opacity: 0.85; line-height: 1.5; margin-top: 8px; }
-
-        /* 规则面板 */
-        .rule-panel { background: #fff; border: 1px solid #dcdfe6; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-        .rule-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .rule-head h3 { margin: 0; font-size: 15px; color: #1f2937; }
-        .rule-ver { font-size: 11px; color: #666; }
-        .rule-content { font-size: 12px; line-height: 1.6; color: #333; max-height: 0; overflow: hidden; transition: max-height 0.3s; }
-        .rule-content.open { max-height: 1200px; }
-        .rule-toggle { background: none; border: none; color: #667eea; font-size: 12px; cursor: pointer; padding: 0; }
-        .rule-section { margin-bottom: 8px; }
-        .rule-section h4 { margin: 4px 0; font-size: 13px; color: #222; }
-        .rule-log { margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; font-size: 11px; color: #666; }
-
-        /* 撤销按钮 */
-        .undo-bar { display: flex; gap: 8px; margin-bottom: 10px; }
-        .undo-btn { flex: 1; padding: 9px; border: none; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 500; background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
-        .undo-btn:disabled { background: #f3f4f6; color: #9ca3af; border-color: #e5e7eb; cursor: not-allowed; }
-
-        .turn-indicator { text-align: center; padding: 8px; background: #e0f2fe; color: #0369a1; border-radius: 8px; margin-bottom: 10px; font-size: 12px; font-weight: 500; }
-
-        .log-box { height: 130px; background: #1e1e2e; color: #cdd6f4; padding: 12px; overflow-y: auto; border-radius: 10px; font-size: 12px; margin-bottom: 12px; line-height: 1.7; font-family: 'SF Mono', Menlo, monospace; -webkit-overflow-scrolling: touch; }
-        .log-item { margin-bottom: 2px; }
-        .log-sys { color: #89b4fa; }
-        .log-battle { color: #f9e2af; }
-        .log-skill { color: #cba6f7; }
-        .log-undo { color: #a6e3a1; font-style: italic; }
-        .log-bank { color: #fab387; }
-
-        /* 命令队列 */
-        .command-box { background: #fffbeb; border: 1px solid #fcd34d; padding: 12px; border-radius: 10px; margin-bottom: 12px; }
-        .command-box h4 { margin: 0 0 8px; color: #92400e; font-size: 13px; }
-        .cmd-list { margin: 0; padding-left: 4px; font-size: 12px; color: #78350f; list-style: none; }
-        .cmd-item { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; padding: 5px; border-radius: 6px; }
-        .cmd-checkbox { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; accent-color: #f59e0b; }
-        .cmd-checkbox:disabled { opacity: 0.4; }
-        .cmd-content { font-weight: 500; flex: 1; line-height: 1.4; }
-        .cmd-meta { font-size: 10px; color: #b45309; display: block; margin-top: 2px; }
-        .cmd-tag { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 9px; margin-left: 4px; vertical-align: middle; }
-        .cmd-tag.bank { background: #fed7aa; color: #c2410c; }
-        .cmd-empty { color: #a16207; font-size: 12px; text-align: center; padding: 8px; }
-        .cmd-bank-tip { font-size: 10px; color: #d97706; margin-top: 2px; font-style: italic; }
-
-        .role-select { background: white; padding: 12px 14px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .role-select label { font-weight: 600; font-size: 13px; display: block; margin-bottom: 7px; color: #333; }
-        .role-select select { width: 100%; padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: #f9fafb; }
-        .role-lock-status { font-size: 11px; color: #22c55e; margin-top: 6px; }
-        .role-lock-status.locked { color: #ef4444; }
-        .role-pwd-btn { width: 100%; margin-top: 8px; padding: 7px; border: 1px dashed #d1d5db; background: #f9fafb; color: #6b7280; font-size: 12px; border-radius: 8px; cursor: pointer; }
-        .role-pwd-btn:active { background: #f3f4f6; }
-
-        .battle-field { display: flex; gap: 10px; margin-bottom: 12px; }
-        .player-card { flex: 1; background: white; padding: 14px 10px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); text-align: center; transition: all 0.25s; border: 2px solid transparent; }
-        .player-card.active { border-color: #22c55e; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(34,197,94,0.2); }
-        .player-card h3 { margin: 0 0 4px; font-size: 14px; color: #1f2937; }
-        .cp-text { font-size: 34px; font-weight: bold; color: #f59e0b; margin: 6px 0; line-height: 1; }
-        .cp-text.negative { color: #ef4444; }
-        .cp-label { font-size: 10px; color: #9ca3af; margin-bottom: 8px; }
-        .skill-btn { width: 100%; padding: 8px; border: none; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 500; background: linear-gradient(135deg, #f43f5e, #e11d48); color: white; }
-        .skill-btn:disabled { background: #d1d5db; cursor: not-allowed; }
-        .skill-desc { font-size: 10px; color: #6b7280; margin-top: 5px; line-height: 1.4; }
-        
-        /* 技能冷却进度条 */
-        .skill-cd-bar { margin-top: 8px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
-        .skill-cd-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #4ade80); border-radius: 3px; transition: width 1s linear; }
-        .skill-cd-text { font-size: 10px; color: #6b7280; margin-top: 4px; text-align: center; }
-
-        .controls { background: white; padding: 14px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .controls h4 { margin: 0 0 10px; font-size: 13px; color: #374151; }
-        .btn { width: 100%; padding: 11px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; margin-bottom: 7px; transition: opacity 0.15s; }
-        .btn:active { opacity: 0.8; }
-        .btn-green { background: #22c55e; color: white; }
-        .btn-red { background: #ef4444; color: white; }
-        .btn-blue { background: #3b82f6; color: white; }
-        .btn-orange { background: #f97316; color: white; }
-        .btn-purple { background: #8b5cf6; color: white; }
-        .btn-gray { background: #6b7280; color: white; }
-
-        .cmd-btns { display: flex; gap: 7px; margin-top: 7px; margin-bottom: 10px; }
-        .cmd-btns .btn { flex: 1; font-size: 11px; padding: 9px 4px; line-height: 1.3; background: #e5e7eb; color: #333; margin-bottom: 0; }
-        .cmd-btns .btn.selected { background: #3b82f6; color: white; }
-
-        .custom-cmd-row { display: flex; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
-        .custom-cmd-row input { flex: 1; min-width: 160px; padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; outline: none; }
-        .custom-cmd-row input:focus { border-color: #3b82f6; }
-        .custom-cmd-row button { padding: 9px 14px; border: none; border-radius: 8px; background: #3b82f6; color: white; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap; }
-
-        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 9px 18px; border-radius: 18px; font-size: 13px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
-        .toast.show { opacity: 1; }
-
-        /* 弹窗 */
-        .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .modal-mask.show { display: flex; }
-        .modal { background: white; border-radius: 14px; padding: 18px; width: 100%; max-width: 360px; max-height: 90vh; overflow-y: auto; }
-        .modal h3 { margin: 0 0 10px; font-size: 16px; color: #1f2937; }
-        .modal p { margin: 0 0 12px; font-size: 12px; color: #6b7280; line-height: 1.5; }
-        .modal label { font-size: 12px; color: #374151; display: block; margin-bottom: 4px; font-weight: 500; }
-        .modal input { width: 100%; padding: 10px 11px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; margin-bottom: 12px; outline: none; }
-        .modal input:focus { border-color: #3b82f6; }
-        .modal textarea { width: 100%; padding: 10px 11px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 12px; margin-bottom: 12px; outline: none; min-height: 100px; font-family: monospace; resize: vertical; }
-        .modal textarea:focus { border-color: #3b82f6; }
-        .modal-btns { display: flex; gap: 10px; }
-        .modal-btns button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; }
-        .modal-cancel { background: #f3f4f6; color: #4b5563; }
-        .modal-confirm { background: #22c55e; color: white; }
-        .modal-confirm.purple { background: #8b5cf6; }
-        .modal-confirm.red { background: #ef4444; }
-        .modal-confirm.blue { background: #3b82f6; }
-        .modal-confirm.orange { background: #f97316; }
-
-        /* 房间弹窗 */
-        .room-modal .room-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
-        .room-modal .room-input-row input { flex: 1; margin-bottom: 0; }
-        .room-modal .room-input-row button { padding: 0 14px; border: none; border-radius: 8px; background: #3b82f6; color: white; cursor: pointer; font-size: 13px; white-space: nowrap; }
-
-        /* 银行贷款弹窗 */
-        .bank-tip { background: #fef3c7; color: #92400e; padding: 8px 10px; border-radius: 6px; font-size: 11px; margin-bottom: 10px; line-height: 1.5; }
-
-        /* 管理设置 */
-        .admin-section { margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5e7eb; }
-        .admin-section h5 { margin: 0 0 10px; font-size: 13px; color: #374151; }
-        .admin-btn { width: 100%; padding: 9px; font-size: 12px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; margin-bottom: 6px; text-align: left; }
-        .admin-btn:active { background: #e5e7eb; }
-        .admin-btn.danger { color: #ef4444; border-color: #fecaca; background: #fef2f2; }
-        .admin-btn.primary { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
-
-        /* 房间列表 */
-        .room-list { margin-top: 6px; max-height: 220px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; }
-        .room-list-item { display: flex; align-items: center; padding: 5px 8px; border-bottom: 1px solid #f3f4f6; gap: 6px; }
-        .room-list-item:last-child { border-bottom: none; }
-        .room-list-item.current { background: #ecfdf5; }
-        .room-list-info { flex: 1; min-width: 0; }
-        .room-list-id { font-weight: 500; font-size: 12px; color: #374151; }
-        .room-list-meta { font-size: 9px; color: #9ca3af; margin-top: 1px; }
-        .room-list-actions { display: flex; gap: 4px; flex-shrink: 0; }
-        .room-list-actions button { padding: 3px 6px; font-size: 9px; border: none; border-radius: 4px; cursor: pointer; font-weight: 400; }
-        .room-list-actions .btn-copy { background: #dbeafe; color: #1d4ed8; }
-        .room-list-actions .btn-enter { background: #dcfce7; color: #15803d; }
-        .room-list-actions .btn-delete { background: #fee2e2; color: #dc2626; }
-        .room-list-empty { padding: 20px; text-align: center; color: #9ca3af; font-size: 12px; }
-        .room-list-refresh { text-align: right; margin-bottom: 4px; }
-        .room-list-refresh button { background: none; border: none; color: #9ca3af; font-size: 10px; cursor: pointer; padding: 0; }
-        .room-checkbox { width: 11px; height: 11px; cursor: pointer; flex-shrink: 0; accent-color: #667eea; margin-right: 4px; margin-left: 1px; }
-        .room-checkbox:disabled { opacity: 0.2; cursor: not-allowed; }
-        .batch-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 0 2px; }
-        .batch-actions label { font-size: 9px; color: #9ca3af; cursor: pointer; display: flex; align-items: center; gap: 2px; }
-        .batch-actions label input { width: 10px; height: 10px; accent-color: #667eea; }
-        .batch-actions button { padding: 2px 6px; font-size: 9px; border: 1px solid #fee2e2; background: #fff; color: #ef4444; border-radius: 4px; cursor: pointer; font-weight: 400; }
-        .batch-actions button:hover { background: #fef2f2; }
-        .role-pwd-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-        .role-pwd-row span { font-size: 12px; flex-shrink: 0; min-width: 75px; color: #374151; }
-        .role-pwd-row input { flex: 1; padding: 6px 8px; font-size: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 0; outline: none; }
-        .role-pwd-row input:focus { border-color: #3b82f6; }
-        .role-pwd-row .toggle-btn { padding: 6px 8px; font-size: 11px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 6px; cursor: pointer; flex-shrink: 0; }
-        .role-pwd-actions { display: flex; gap: 6px; margin-bottom: 12px; }
-        .role-pwd-actions button { flex: 1; padding: 7px; font-size: 11px; }
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans SC', 'Fira Code', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
     </style>
 </head>
-<body>
-
-<div class="header">
-    <h1>⚔️ 博弈论：律政与代码</h1>
-    <p>双人实时对战 · Firebase 同步 V3.5</p>
-</div>
-
-<!-- 房间/同步面板（顶部UI保持原样） -->
-<div class="room-panel">
-    <div class="room-status">
-        <span><span class="room-dot" id="syncDot"></span><span id="syncStatus">连接中...</span></span>
-        <span class="room-id" id="roomIdDisplay">房间: ---</span>
-    </div>
-    <div class="room-btns">
-        <button class="room-btn green" onclick="copyRoomLink()">📤 复制链接</button>
-        <button class="room-btn" onclick="openRoomModal()">🏠 换房间</button>
-        <button class="room-btn cyan" onclick="openExportModal()">📋 导出</button>
-        <button class="room-btn orange" onclick="openImportModal()">📥 导入</button>
-    </div>
-    <div class="room-tip">实时同步：对方操作自动刷新 | 导出数据可用于版本升级迁移</div>
-</div>
-
-<!-- 规则面板 -->
-<div class="rule-panel">
-    <div class="rule-head">
-        <h3>📖 游戏规则</h3>
-        <div>
-            <span class="rule-ver">V3.5</span>
-            <button class="rule-toggle" onclick="toggleRule()">展开/收起</button>
-        </div>
-    </div>
-    <div class="rule-content" id="ruleContent">
-        <div class="rule-section">
-            <h4>一、基础设定</h4>
-            <p>1. 双角色：律师 / 程序员，CP为命令点数；打赌获胜获得1CP。</p>
-            <p>2. 命令分级：1级(-1CP)、2级(-2CP)、3级(-4CP)，选等级+输内容+点下达。</p>
-            <p>3. All in：消耗自身全部CP，掠夺对方同等数量CP。</p>
-            <p>4. 🏦 银行系统：可贷款获得CP，但生成一条自己要完成的待办，由对方确认完成。</p>
-        </div>
-        <div class="rule-section">
-            <h4>二、专属技能（24小时冷却）</h4>
-            <p>👨‍⚖️ 律师【律师函警告】：撤销对方最后1条命令，全额返还CP。</p>
-            <p>👨‍💻 程序员【致命Bug】：扣除对方当前30%CP，最少扣1点。</p>
-            <p>⏱️ 技能使用后进入24小时冷却，进度条实时显示剩余时间。</p>
-        </div>
-        <div class="rule-section">
-            <h4>三、命令执行</h4>
-            <p>1. 普通命令：下达者发给对方，对方勾选完成；</p>
-            <p>2. 贷款命令：谁贷款谁完成，由对方勾选确认你完成了；</p>
-            <p>3. 勾选完成自动移除，写入战斗日志。</p>
-        </div>
-        <div class="rule-section">
-            <h4>四、安全机制</h4>
-            <p>1. 🔐 角色密码：每个角色可独立设置密码，防止对方操纵你的号；</p>
-            <p>2. 🔒 管理员密码：重置、房间管理等操作需验证，默认8868，可修改。</p>
-        </div>
-        <div class="rule-section">
-            <h4>五、管理员功能</h4>
-            <p>📋 房间管理：查看所有房间、强制删除、新建房间、一键复制链接；</p>
-            <p>🔑 密码管理：修改管理员密码、重置当前房间数据。</p>
-        </div>
-        <div class="rule-log">
-            <h4>版本更新记录</h4>
-            <p><b>V3.5</b>：删掉首次切换角色强制设置密码；角色密码设置改为一次性使用，生效后置灰；深度优化批量操作UI回归V3.2紧凑风格。</p>
-            <p><b>V3.4</b>：角色选择区新增密码设置入口；优化房间管理批量操作UI更紧凑；All in通吃改为需对方确认后生效。</p>
-            <p><b>V3.3</b>：管理设置新增角色密码管理（查看/修改/重置）；修复房间管理复制失效bug；房间管理支持批量删除。</p>
-            <p><b>V3.2</b>：修复导入后连接卡死问题；管理设置新增房间列表管理（查看/删除/新建/复制）；重置整局移至管理设置内。</p>
-            <p><b>V3.1</b>：修正贷款逻辑；新增修改重置密码；新增房间数据导入导出。</p>
-            <p><b>V3.0</b>：银行系统；角色密码；重置密码；技能24小时冷却+进度条。</p>
-            <p><b>V2.0</b>：Firebase实时同步+房间系统。</p>
-            <p><b>V1.0</b>：初始版本。</p>
-        </div>
-    </div>
-</div>
-
-<!-- 撤销 -->
-<div class="undo-bar">
-    <button class="undo-btn" id="undoBtn" onclick="undoAction()" disabled>↩️ 撤销上一步（剩 <span id="undoLeft">0</span>/3 步）</button>
-</div>
-
-<div class="turn-indicator" id="turnIndicator">当前回合：律师</div>
-
-<div class="log-box" id="logBox">
-    <div class="log-item log-sys">🎉 V3.5 新一局游戏开始！</div>
-</div>
-
-<div class="command-box">
-    <h4>🔔 待执行命令 (<span id="cmdCount">0</span> 条)</h4>
-    <ul class="cmd-list" id="cmdList">
-        <li class="cmd-empty">暂无待执行命令</li>
-    </ul>
-</div>
-
-<div class="role-select">
-    <label>选择你的身份：</label>
-    <select id="roleSelect" onchange="onRoleSelectChange()">
-        <option value="playerA">👨‍⚖️ 我是律师</option>
-        <option value="playerB">👨‍💻 我是程序员</option>
-    </select>
-    <div class="role-lock-status" id="roleLockStatus">🔓 当前角色未设置密码</div>
-    <button class="role-pwd-btn" onclick="openRolePwdSetting()">🔑 设置角色密码</button>
-</div>
-
-<div class="battle-field">
-    <div class="player-card" id="cardA">
-        <h3>👨‍⚖️ 律师</h3>
-        <div class="cp-text" id="cpA">0</div>
-        <div class="cp-label">CP 点数</div>
-        <button class="skill-btn" id="btnSkillA" onclick="useSkill('playerA')">律师函警告</button>
-        <div class="skill-cd-bar" id="cdBarA" style="display:none;">
-            <div class="skill-cd-fill" id="cdFillA" style="width:0%"></div>
-        </div>
-        <div class="skill-cd-text" id="cdTextA" style="display:none;">冷却中</div>
-        <div class="skill-desc">撤销对方指令，返还CP</div>
-    </div>
-    <div class="player-card" id="cardB">
-        <h3>👨‍💻 程序员</h3>
-        <div class="cp-text" id="cpB">0</div>
-        <div class="cp-label">CP 点数</div>
-        <button class="skill-btn" id="btnSkillB" onclick="useSkill('playerB')">致命 Bug</button>
-        <div class="skill-cd-bar" id="cdBarB" style="display:none;">
-            <div class="skill-cd-fill" id="cdFillB" style="width:0%"></div>
-        </div>
-        <div class="skill-cd-text" id="cdTextB" style="display:none;">冷却中</div>
-        <div class="skill-desc">扣除对方30%CP</div>
-    </div>
-</div>
-
-<div class="controls">
-    <h4>🎯 基础操作</h4>
-    <button class="btn btn-green" onclick="openBetModal()">🏆 赢打赌 (+1CP)</button>
-    <button class="btn btn-red" onclick="allIn()">🔥 All in通吃</button>
-    <button class="btn btn-purple" onclick="openBankModal()">🏦 银行贷款（借CP，自己要完成）</button>
-</div>
-
-<div class="controls">
-    <h4>⚡ 下达命令（先选等级 → 输内容 → 点下达）</h4>
-    <div class="cmd-btns">
-        <button class="btn" onclick="selectCmdCost(1)" id="cost1">1级 -1CP</button>
-        <button class="btn" onclick="selectCmdCost(2)" id="cost2">2级 -2CP</button>
-        <button class="btn" onclick="selectCmdCost(4)" id="cost4">3级 -4CP</button>
-    </div>
-    <div class="custom-cmd-row">
-        <input type="text" id="cmdContent" placeholder="输入命令内容...">
-        <button onclick="issueCommand()">下达命令</button>
-    </div>
-</div>
-
-<div class="controls">
-    <button class="btn btn-gray" onclick="openAdminModal()">⚙️ 管理设置</button>
-</div>
-
-<!-- 打赌弹窗 -->
-<div class="modal-mask" id="betModal">
-    <div class="modal">
-        <h3>🏆 赢打赌</h3>
-        <p>输入本次打赌的具体内容</p>
-        <input type="text" id="betContent" placeholder="例：猜拳赢了">
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeBetModal()">取消</button>
-            <button class="modal-confirm" onclick="confirmBet()">确认 +1CP</button>
-        </div>
-    </div>
-</div>
-
-<!-- 银行贷款弹窗 -->
-<div class="modal-mask" id="bankModal">
-    <div class="modal">
-        <h3>🏦 银行贷款</h3>
-        <div class="bank-tip">💡 向银行贷款获得CP，但你要完成一条待办命令作为抵押，由对方确认你完成了才算数。</div>
-        <p>选择贷款等级（借多少CP）：</p>
-        <div class="cmd-btns" style="margin-bottom: 12px;">
-            <button class="btn" onclick="selectBankCost(1)" id="bankCost1">1级 贷1CP</button>
-            <button class="btn" onclick="selectBankCost(2)" id="bankCost2">2级 贷2CP</button>
-            <button class="btn" onclick="selectBankCost(4)" id="bankCost4">3级 贷4CP</button>
-        </div>
-        <input type="text" id="bankCmdContent" placeholder="输入你要完成的待办内容...">
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeBankModal()">取消</button>
-            <button class="modal-confirm purple" onclick="confirmBankLoan()">确认贷款</button>
-        </div>
-    </div>
-</div>
-
-<!-- 管理设置弹窗 -->
-<div class="modal-mask" id="adminModal">
-    <div class="modal">
-        <h3>⚙️ 管理设置</h3>
-        <p>需要管理员密码才能进入设置</p>
-        <input type="password" id="adminVerifyInput" placeholder="请输入管理员密码">
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeAdminModal()">取消</button>
-            <button class="modal-confirm blue" onclick="verifyAdmin()">验证进入</button>
-        </div>
-        
-        <!-- 验证通过后显示的管理内容 -->
-        <div id="adminContent" style="display:none;">
-            <!-- 房间管理 -->
-            <div class="admin-section">
-                <h5>🏠 房间管理</h5>
-                <div class="room-list-refresh">
-                    <button onclick="loadAllRooms()">🔄 刷新列表</button>
+<body class="min-h-screen pb-12">
+    <!-- 顶部状态栏 -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 backdrop-blur-md bg-opacity-95 px-4 py-3 shadow-sm">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+                <span class="text-xl">⚔️</span>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                        博弈论：律政与代码 
+                        <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-200">V3.5.3</span>
+                    </h1>
+                    <p class="text-[10px] text-slate-500">双人实时对战 · Firebase 同步</p>
                 </div>
-                <div class="batch-actions">
-                    <label>
-                        <input type="checkbox" id="selectAllRooms" onchange="toggleSelectAllRooms(this)"> 全选
+            </div>
+            
+            <div class="flex items-center gap-1.5 text-xs">
+                <span id="conn-status" class="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded border border-amber-200">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span class="text-[11px]" id="room-display">连接中...</span>
+                </span>
+                <button onclick="copyRoomLink()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="复制链接">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button onclick="openRoomModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="换房间">
+                    <i class="fa-solid fa-house"></i>
+                </button>
+                <button onclick="openExportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="导出">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <button onclick="openImportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="导入">
+                    <i class="fa-solid fa-upload"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-4 space-y-4">
+        <!-- 实时同步提示条 -->
+        <div class="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between text-xs text-slate-500 shadow-sm">
+            <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-info text-blue-500"></i>
+                <span>实时同步：对方操作自动刷新 | 导出数据可用于版本升级迁移</span>
+            </span>
+            <button onclick="toggleRules()" class="text-indigo-600 hover:text-indigo-500 flex items-center gap-1 font-medium">
+                <span id="rule-btn-txt">📖 游戏规则</span>
+                <i id="rule-btn-arrow" class="fa-solid fa-chevron-down text-[10px]"></i>
+            </button>
+        </div>
+
+        <!-- 规则面板（折叠） -->
+        <section id="rules-panel" class="hidden bg-white border border-slate-200 rounded-xl p-4 text-xs space-y-4 text-slate-600 shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 class="font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-book-open text-indigo-500"></i> 规则指南
+                </h3>
+                <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">V3.5.3</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        <span class="text-indigo-500">一、</span> 基础设定
+                    </h4>
+                    <ul class="list-disc pl-4 space-y-1 text-slate-500">
+                        <li>双角色：律师 / 程序员，<strong>CP 即 Command Point（命令点数）</strong>；打赌获胜获得 1 CP。</li>
+                        <li>命令分级：1级(-1 CP)、2级(-2 CP)、3级(-4 CP)，选等级+输内容+点下达。</li>
+                        <li>All in：消耗自身全部 CP，对方需确认后，掠夺对方同等数量 CP。</li>
+                        <li>🏦 银行系统：可贷款获得 CP，但生成一条自己要完成的待办，由对方确认完成。</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        <span class="text-emerald-500">二、</span> 专属技能（24h冷却）
+                    </h4>
+                    <ul class="list-disc pl-4 space-y-1 text-slate-500">
+                        <li>👨‍⚖️ 律师【律师函警告】：撤销对方最后1条命令，全额返还 CP。</li>
+                        <li>👨‍💻 程序员【致命Bug】：扣除对方当前30% CP，最少扣1点。</li>
+                        <li>⏱️ 技能使用后进入24小时冷却，进度条实时显示剩余时间。</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        <span class="text-amber-500">三、</span> 命令执行
+                    </h4>
+                    <ul class="list-disc pl-4 space-y-1 text-slate-500">
+                        <li>普通命令：下达者发给对方，对方勾选完成；</li>
+                        <li>贷款命令：谁贷款谁完成，由对方勾选确认你完成了；</li>
+                        <li>勾选完成自动移除，写入战斗日志。</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
+                        <span class="text-rose-500">四、</span> 安全与管理员
+                    </h4>
+                    <ul class="list-disc pl-4 space-y-1 text-slate-500">
+                        <li>🔐 角色密码：独立设置密码，防止对方操纵你的号（一次生效后置灰）。</li>
+                        <li>🔒 管理员密码：初始内置，可自行修改，用于重置和房间管理。</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- 更新记录 -->
+            <div class="border-t border-slate-100 pt-3">
+                <h4 class="font-bold text-slate-700 mb-1 text-[11px]">版本更新记录</h4>
+                <div class="space-y-1 text-[11px] text-slate-500 max-h-24 overflow-y-auto custom-scrollbar">
+                    <p><strong class="text-slate-700">V3.5.3：</strong> 规则中补充 CP = Command Point 解析；主面板中恢复精简 CP 简称；全面隐藏默认管理口令文字提示，防止泄露。</p>
+                    <p><strong class="text-slate-700">V3.5.2：</strong> 视觉大改版！重构为明亮淡雅风格。</p>
+                    <p><strong class="text-slate-700">V3.5.1：</strong> 修复贷款提示CP数错误Bug；重构房间管理与批量操作UI，压缩空间更显紧凑清晰。</p>
+                    <p><strong class="text-slate-700">V3.5：</strong> 删掉首次切换角色强制密码；密码改为一次性使用，生效后置灰。</p>
+                    <p><strong class="text-slate-700">V3.3：</strong> 新增角色密码管理；修复房间批量删除逻辑。</p>
+                    <p><strong class="text-slate-700">V3.2：</strong> 新增房间列表管理与整局重置。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 当前状态 & 撤销 -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-slate-500">当前回合：</span>
+                <span id="turn-badge" class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-bold border border-indigo-100">律师</span>
+                <span id="game-status-text" class="text-emerald-600 font-medium">🎉 新一局游戏开始！</span>
+            </div>
+            <button id="undo-btn" onclick="triggerUndo()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1 transition">
+                <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                <span>撤销上一步 (<span id="undo-count">3</span>/3)</span>
+            </button>
+        </div>
+
+        <!-- 待执行命令板块 -->
+        <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-bell text-amber-500 animate-bounce"></i>
+                    <span>待执行命令 (<span id="todo-count" class="text-amber-600">0</span>条)</span>
+                </h3>
+            </div>
+            <div id="todo-list" class="space-y-2">
+                <p class="text-xs text-slate-400 text-center py-4">暂无待执行命令</p>
+            </div>
+        </section>
+
+        <!-- 角色面板 -->
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 律师 👨‍⚖️ -->
+            <div id="role-box-lawyer" class="bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm">
+                <div class="absolute -right-6 -bottom-6 text-slate-100 text-8xl font-black pointer-events-none">LAW</div>
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xl">👨‍⚖️</div>
+                        <div>
+                            <h3 class="font-bold text-sm text-slate-800">律师</h3>
+                            <button id="set-pwd-lawyer-btn" onclick="openSetPasswordModal('lawyer')" class="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 mt-0.5">
+                                <i class="fa-solid fa-key text-[9px]"></i> <span id="pwd-state-lawyer">设置操作密码</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="selectRole('lawyer')" id="role-select-lawyer" class="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition">
+                        选择我是律师
+                    </button>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-3 text-center my-3 border border-slate-100">
+                    <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">CP 点数</div>
+                    <div class="text-3xl font-extrabold text-blue-600 my-1" id="cp-lawyer">0</div>
+                </div>
+
+                <!-- 技能 -->
+                <div class="bg-slate-50/60 rounded-xl p-3 border border-slate-100">
+                    <div class="flex justify-between items-center text-xs mb-1.5">
+                        <span class="font-bold text-blue-600 flex items-center gap-1">
+                            🛡️ 律师函警告 <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded border border-blue-100">24h</span>
+                        </span>
+                        <button onclick="useLawyerSkill()" id="skill-lawyer-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition">
+                            发动
+                        </button>
+                    </div>
+                    <p class="text-[10.5px] text-slate-500">撤销对方最后下达的 1 条命令，全额退还其消耗的 CP。</p>
+                    <!-- 冷却进度 -->
+                    <div class="mt-2.5 hidden" id="cooldown-container-lawyer">
+                        <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                            <span>冷却中...</span>
+                            <span id="cooldown-time-lawyer">--:--:--</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-1">
+                            <div id="cooldown-bar-lawyer" class="bg-blue-500 h-1 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 程序员 👨‍💻 -->
+            <div id="role-box-coder" class="bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm">
+                <div class="absolute -right-6 -bottom-6 text-slate-100 text-8xl font-black pointer-events-none">CODE</div>
+                <div class="flex justify-between items-start mb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-xl">👨‍💻</div>
+                        <div>
+                            <h3 class="font-bold text-sm text-slate-800">程序员</h3>
+                            <button id="set-pwd-coder-btn" onclick="openSetPasswordModal('coder')" class="text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5 mt-0.5">
+                                <i class="fa-solid fa-key text-[9px]"></i> <span id="pwd-state-coder">设置操作密码</span>
+                            </button>
+                        </div>
+                    </div>
+                    <button onclick="selectRole('coder')" id="role-select-coder" class="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition">
+                        选择我是程序员
+                    </button>
+                </div>
+
+                <div class="bg-slate-50 rounded-xl p-3 text-center my-3 border border-slate-100">
+                    <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">CP 点数</div>
+                    <div class="text-3xl font-extrabold text-emerald-600 my-1" id="cp-coder">0</div>
+                </div>
+
+                <!-- 技能 -->
+                <div class="bg-slate-50/60 rounded-xl p-3 border border-slate-100">
+                    <div class="flex justify-between items-center text-xs mb-1.5">
+                        <span class="font-bold text-emerald-400 flex items-center gap-1">
+                            ⚡ 致命 Bug <span class="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.2 rounded border border-emerald-100">24h</span>
+                        </span>
+                        <button onclick="useCoderSkill()" id="skill-coder-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition">
+                            发动
+                        </button>
+                    </div>
+                    <p class="text-[10.5px] text-slate-500">扣除对方当前 30% 的 CP 点数（按四舍五入计算，最少扣 1 点）。</p>
+                    <!-- 冷却进度 -->
+                    <div class="mt-2.5 hidden" id="cooldown-container-coder">
+                        <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                            <span>冷却中...</span>
+                            <span id="cooldown-time-coder">--:--:--</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-1">
+                            <div id="cooldown-bar-coder" class="bg-emerald-500 h-1 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 基础操作板块 -->
+        <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-indigo-500"></i>
+                <span>🎯 基础操作</span>
+            </h3>
+            
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <button onclick="openBetModal()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-slate-200 transition flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <span class="text-lg">🏆</span>
+                    <span>赢打赌 (+1 CP)</span>
+                </button>
+                <button onclick="triggerAllIn()" class="bg-rose-50 hover:bg-rose-100/60 text-rose-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-rose-200 transition flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <span class="text-lg">🔥</span>
+                    <span>All in 通吃</span>
+                </button>
+                <button onclick="openLoanModal()" class="bg-indigo-50 hover:bg-indigo-100/60 text-indigo-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-indigo-200 transition flex flex-col items-center justify-center gap-1 shadow-sm">
+                    <span class="text-lg">🏦</span>
+                    <span>银行贷款</span>
+                </button>
+            </div>
+
+            <!-- 下达命令 -->
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <h4 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1">
+                    <i class="fa-solid fa-paper-plane text-indigo-500"></i> 下达命令
+                </h4>
+                <div class="flex flex-wrap gap-2 mb-2">
+                    <label class="flex-1 min-w-[70px] bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:border-slate-300 transition shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-700 font-bold">1级 ⚡</span>
+                            <span class="text-[9px] text-slate-400">消耗 1 CP</span>
+                        </div>
+                        <input type="radio" name="cmd-lv" value="1" checked class="accent-indigo-600">
                     </label>
-                    <button onclick="batchDeleteRooms()">🗑️ 批量删除</button>
+                    <label class="flex-1 min-w-[70px] bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:border-slate-300 transition shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-700 font-bold">2级 ⚡⚡</span>
+                            <span class="text-[9px] text-slate-400">消耗 2 CP</span>
+                        </div>
+                        <input type="radio" name="cmd-lv" value="2" class="accent-indigo-600">
+                    </label>
+                    <label class="flex-1 min-w-[70px] bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:border-slate-300 transition shadow-sm">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-700 font-bold">3级 ⚡⚡⚡</span>
+                            <span class="text-[9px] text-slate-400">消耗 4 CP</span>
+                        </div>
+                        <input type="radio" name="cmd-lv" value="3" class="accent-indigo-600">
+                    </label>
                 </div>
-                <div class="room-list" id="adminRoomList">
-                    <div class="room-list-empty">加载中...</div>
-                </div>
-                <button class="admin-btn primary" onclick="adminCreateRoom()">➕ 新建房间</button>
-            </div>
-            
-            <!-- 当前房间操作 -->
-            <div class="admin-section">
-                <h5>📌 当前房间操作</h5>
-                <button class="admin-btn danger" onclick="adminResetRoom()">🔄 重置当前房间数据</button>
-                <button class="admin-btn" onclick="adminCopyCurrentLink()">📋 复制当前房间链接</button>
-            </div>
-            
-            <!-- 密码管理 -->
-            <div class="admin-section">
-                <h5>🔑 管理员密码</h5>
-                <label>修改管理员密码：</label>
-                <input type="text" id="newAdminPwd" placeholder="输入新的管理员密码">
-                <button class="admin-btn primary" onclick="changeAdminPwd()">确认修改密码</button>
-            </div>
-            
-            <div class="admin-section">
-                <h5>👥 角色密码管理</h5>
-                <div class="role-pwd-row">
-                    <span>👨‍⚖️ 律师：</span>
-                    <input type="password" id="lawyerPwdDisplay" readonly>
-                    <button class="toggle-btn" onclick="togglePwdVisibility('lawyerPwdDisplay')">👁️</button>
-                </div>
-                <div class="role-pwd-actions">
-                    <button class="admin-btn primary" onclick="changeRolePwd('playerA')">修改密码</button>
-                    <button class="admin-btn danger" onclick="resetRolePwd('playerA')">重置密码</button>
-                </div>
-                <div class="role-pwd-row">
-                    <span>👨‍💻 程序员：</span>
-                    <input type="password" id="coderPwdDisplay" readonly>
-                    <button class="toggle-btn" onclick="togglePwdVisibility('coderPwdDisplay')">👁️</button>
-                </div>
-                <div class="role-pwd-actions">
-                    <button class="admin-btn primary" onclick="changeRolePwd('playerB')">修改密码</button>
-                    <button class="admin-btn danger" onclick="resetRolePwd('playerB')">重置密码</button>
+                <div class="flex gap-2">
+                    <input type="text" id="cmd-text" placeholder="输入你需要惩罚或指示对方做的事情..." class="flex-1 bg-white text-xs border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-sm">
+                    <button onclick="dispatchCommand()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition shrink-0">
+                        下达
+                    </button>
                 </div>
             </div>
+        </section>
+
+        <!-- 历史事件日志 -->
+        <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+            <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+                <i class="fa-solid fa-clock-rotate-left text-slate-500"></i>
+                <span>📝 战斗日志</span>
+            </h3>
+            <div id="logs-container" class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                <p class="text-xs text-slate-400 text-center py-4">新一局游戏正在酝酿...</p>
+            </div>
+        </section>
+
+        <!-- 管理区入口 -->
+        <div class="flex justify-center">
+            <button onclick="reqAdminAccess()" class="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition">
+                <i class="fa-solid fa-gears"></i>
+                <span>管理设置</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- ==================== 模态弹窗系统 ==================== -->
+
+    <!-- 1. 打赌弹窗 -->
+    <div id="bet-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">🏆</span>
+                <h4 class="font-bold text-slate-800 text-sm">赢打赌</h4>
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1.5">输入本次打赌的具体内容：</label>
+                <input type="text" id="bet-text" placeholder="例如：打赌今晚九点不下雨..." class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('bet-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitBet()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认 +1 CP</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 角色密码弹窗 -->
-<div class="modal-mask" id="rolePwdModal">
-    <div class="modal">
-        <h3 id="rolePwdTitle">🔐 角色密码验证</h3>
-        <p id="rolePwdDesc">请输入该角色的操作密码</p>
-        <input type="password" id="rolePwdInput" placeholder="请输入密码">
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeRolePwdModal()">取消</button>
-            <button class="modal-confirm" id="rolePwdConfirmBtn" onclick="confirmRolePwd()">确认</button>
+    <!-- 2. 贷款弹窗 -->
+    <div id="loan-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">🏦</span>
+                <h4 class="font-bold text-slate-800 text-sm">银行贷款</h4>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
+                💡 向银行贷款获得CP，但你必须当即生成一条<strong>由自己完成</strong>的待办命令作为抵押。对方需要确认你真的完成后，它才会自动移除。
+            </p>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1.5">选择贷款等级（借多少CP）：</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <label class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition">
+                        <span class="text-[10px] text-indigo-600 font-bold">1级</span>
+                        <span class="text-[9px] text-slate-400">贷 1 CP</span>
+                        <input type="radio" name="loan-lv" value="1" checked class="mt-1.5 accent-indigo-600">
+                    </label>
+                    <label class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition">
+                        <span class="text-[10px] text-indigo-600 font-bold">2级</span>
+                        <span class="text-[9px] text-slate-400">贷 2 CP</span>
+                        <input type="radio" name="loan-lv" value="2" class="mt-1.5 accent-indigo-600">
+                    </label>
+                    <label class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition">
+                        <span class="text-[10px] text-indigo-600 font-bold">3级</span>
+                        <span class="text-[9px] text-slate-400">贷 4 CP</span>
+                        <input type="radio" name="loan-lv" value="3" class="mt-1.5 accent-indigo-600">
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1.5">输入你（贷款方）承诺要完成的指令：</label>
+                <input type="text" id="loan-text" placeholder="例如：明天洗碗、跑两公里..." class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('loan-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitLoan()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认贷款</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 房间弹窗 -->
-<div class="modal-mask" id="roomModal">
-    <div class="modal room-modal">
-        <h3>🏠 房间设置</h3>
-        <p>两个人输入相同的房间号，即可实时对战</p>
-        <div class="room-input-row">
-            <input type="text" id="roomInput" placeholder="输入房间号，如：room001">
-            <button onclick="joinRoom()">进入</button>
+    <!-- 3. 管理设置验证 & 管理后台 -->
+    <div id="admin-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <!-- 密码验证层 -->
+        <div id="admin-auth" class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">⚙️</span>
+                <h4 class="font-bold text-slate-800 text-sm">管理设置</h4>
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1.5">请输入安全管理密码进入设置：</label>
+                <input type="password" id="admin-pwd-input" placeholder="请输入管理员密码" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('admin-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="verifyAdmin()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">验证进入</button>
+            </div>
         </div>
-        <p style="font-size:11px; color:#999;">或者点下面按钮随机生成一个新房间</p>
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeRoomModal()">取消</button>
-            <button class="modal-confirm" onclick="createNewRoom()">🎲 随机新房间</button>
+
+        <!-- 真实面板 -->
+        <div id="admin-content" class="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-4 space-y-4 shadow-xl hidden">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-shield-halved text-indigo-500"></i> 管理控制中心
+                </h4>
+                <button onclick="closeModal('admin-modal')" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- 1. 房间管理区 -->
+            <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+                <div class="flex justify-between items-center mb-1.5">
+                    <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                        <i class="fa-solid fa-network-wired text-[10px] text-indigo-500"></i> 🏠 房间列表
+                    </span>
+                    <div class="flex items-center gap-1 text-[10px]">
+                        <button onclick="refreshRoomList()" class="bg-white text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 hover:bg-slate-100 transition shadow-sm" title="刷新列表">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button onclick="toggleAllRooms(this)" class="bg-white text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 hover:bg-slate-100 transition text-[9px] shadow-sm">
+                            全选
+                        </button>
+                        <button onclick="bulkDeleteRooms()" class="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200 hover:bg-rose-100 transition text-[9px] font-semibold">
+                            <i class="fa-solid fa-trash-can"></i> 批量删除
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 紧凑表格容器 -->
+                <div class="max-h-24 overflow-y-auto custom-scrollbar border border-slate-200 rounded bg-white">
+                    <table class="w-full text-left border-collapse text-[10px]">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                <th class="py-1 px-1.5 text-center w-6">选</th>
+                                <th class="py-1 px-1.5">房间名</th>
+                                <th class="py-1 px-1.5 text-right w-20">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rooms-tbody" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="3" class="text-center py-2 text-slate-400 text-[10px]">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 新建房间 -->
+                <div class="flex gap-1.5 mt-2">
+                    <input type="text" id="new-room-input" placeholder="输入新房间号..." class="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-indigo-500 text-slate-800 shadow-sm">
+                    <button onclick="createNewRoom()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded text-[10px] shadow-sm transition shrink-0">
+                        <i class="fa-solid fa-plus"></i> 新建房间
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- 2. 当前房间控制 -->
+                <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 flex flex-col justify-between">
+                    <span class="text-[11px] font-bold text-slate-700 mb-1.5 block">📌 当前房间操作</span>
+                    <div class="space-y-1">
+                        <button onclick="resetCurrentRoomData()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded py-1 px-2 text-[10px] font-semibold transition text-left flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-arrow-up"></i>
+                            <span>🔄 重置当前房间数据</span>
+                        </button>
+                        <button onclick="copyRoomLink()" class="w-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded py-1 px-2 text-[10px] transition text-left flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-link"></i>
+                            <span>📋 复制当前房间链接</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. 管理员密码修改 -->
+                <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+                    <span class="text-[11px] font-bold text-slate-700 mb-1.5 block">🔑 修改管理员密码</span>
+                    <div class="space-y-1.5">
+                        <input type="text" id="new-admin-pwd" placeholder="输入新的管理员密码" class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[10px] text-slate-800 focus:outline-none focus:border-indigo-500 shadow-sm">
+                        <button onclick="changeAdminPassword()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1 px-2 rounded text-[10px] shadow-sm transition">
+                            确认修改密码
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. 角色密码查看 & 重置 -->
+            <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
+                <span class="text-[11px] font-bold text-slate-700 mb-1.5 block">👥 角色密码管理</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                    <!-- 律师 -->
+                    <div class="bg-white p-2 rounded border border-slate-200 space-y-1 shadow-sm">
+                        <div class="flex justify-between items-center text-blue-600 font-bold">
+                            <span>👨‍⚖️ 律师密码</span>
+                            <span id="pwd-val-lawyer" class="text-slate-500 font-mono">******</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="revealRolePwd('lawyer')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex items-center justify-center">
+                                <i class="fa-solid fa-eye text-[9px]"></i>
+                            </button>
+                            <button onclick="adminModifyRolePwd('lawyer')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex-1">
+                                修改密码
+                            </button>
+                            <button onclick="adminResetRolePwd('lawyer')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200 font-semibold">
+                                重置
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 程序员 -->
+                    <div class="bg-white p-2 rounded border border-slate-200 space-y-1 shadow-sm">
+                        <div class="flex justify-between items-center text-emerald-600 font-bold">
+                            <span>👨‍💻 程序员密码</span>
+                            <span id="pwd-val-coder" class="text-slate-500 font-mono">******</span>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="revealRolePwd('coder')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex items-center justify-center">
+                                <i class="fa-solid fa-eye text-[9px]"></i>
+                            </button>
+                            <button onclick="adminModifyRolePwd('coder')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex-1">
+                                修改密码
+                            </button>
+                            <button onclick="adminResetRolePwd('coder')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200 font-semibold">
+                                重置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 导出数据弹窗 -->
-<div class="modal-mask" id="exportModal">
-    <div class="modal">
-        <h3>📋 导出房间数据</h3>
-        <p>复制下方数据，可在新房间导入，完整迁移所有游戏进度</p>
-        <textarea id="exportData" readonly></textarea>
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeExportModal()">关闭</button>
-            <button class="modal-confirm blue" onclick="copyExportData()">📋 一键复制</button>
+    <!-- 5. 角色密码验证弹窗 -->
+    <div id="role-auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">🔐</span>
+                <h4 class="font-bold text-slate-800 text-sm">角色密码验证</h4>
+            </div>
+            <div>
+                <label class="block text-[11px] text-slate-500 mb-1.5">请输入该角色的操作密码：</label>
+                <input type="password" id="role-auth-input" placeholder="输入密码完成验证" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('role-auth-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitRoleVerification()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认</button>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- 导入数据弹窗 -->
-<div class="modal-mask" id="importModal">
-    <div class="modal">
-        <h3>📥 导入房间数据</h3>
-        <p>粘贴之前导出的数据，覆盖当前房间所有进度</p>
-        <textarea id="importData" placeholder="粘贴导出的数据..."></textarea>
-        <p style="color: #ef4444; font-size: 11px;">⚠️ 导入会覆盖当前房间所有数据，不可撤销</p>
-        <div class="modal-btns">
-            <button class="modal-cancel" onclick="closeImportModal()">取消</button>
-            <button class="modal-confirm orange" onclick="confirmImport()">确认导入</button>
+    <!-- 6. 房间设置弹窗 -->
+    <div id="room-init-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">🏠</span>
+                <h4 class="font-bold text-slate-800 text-sm">房间设置</h4>
+            </div>
+            <p class="text-xs text-slate-500 leading-relaxed">
+                两个人输入相同的房间号，即可进入同一个房间进行实时博弈同步对战。
+            </p>
+            <div>
+                <input type="text" id="target-room-id" placeholder="输入一个你想进入或创建的房间名" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex justify-between items-center text-xs pt-1">
+                <button onclick="closeModal('room-init-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <div class="flex gap-2">
+                    <button onclick="generateRandomRoom()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">🎲 随机新房间</button>
+                    <button onclick="joinRoomByInput()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">进入</button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="toast" id="toast"></div>
+    <!-- 7. 导出弹窗 -->
+    <div id="export-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">📋</span>
+                <h4 class="font-bold text-slate-800 text-sm">导出房间数据</h4>
+            </div>
+            <p class="text-xs text-slate-500">
+                复制下方加密后的数据文本，可以在新的浏览器或新版本中导入，无缝迁移所有游戏进度。
+            </p>
+            <textarea id="export-textarea" readonly class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg text-[10px] p-2 text-slate-500 font-mono focus:outline-none custom-scrollbar"></textarea>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('export-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">关闭</button>
+                <button onclick="copyExportedText()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm flex items-center gap-1">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>一键复制</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
-<script>
-// ========== Firebase 配置 ==========
-const firebaseConfig = {
-    apiKey: "AIzaSyBZi0WCRGTwuT5MFKkk5dU3gUvIKXVA0V0",
-    authDomain: "command-point-2217e.firebaseapp.com",
-    projectId: "command-point-2217e",
-    storageBucket: "command-point-2217e.firebasestorage.app",
-    messagingSenderId: "257939353713",
-    appId: "1:257939353713:web:415584060618a41a342bd0",
-    measurementId: "G-0EDVJ8R0HY"
-};
+    <!-- 8. 导入弹窗 -->
+    <div id="import-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">📥</span>
+                <h4 class="font-bold text-slate-800 text-sm">导入房间数据</h4>
+            </div>
+            <p class="text-xs text-slate-500">
+                在下方粘贴先前导出的加密数据文本，覆盖导入将覆盖该房间下的所有对局。
+            </p>
+            <textarea id="import-textarea" placeholder="在此粘贴导出的加密文本字符串..." class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg text-[10px] p-2 text-slate-700 font-mono focus:outline-none focus:border-indigo-500 custom-scrollbar"></textarea>
+            <p class="text-[10px] text-amber-600 font-medium">⚠️ 警告：导入操作是覆盖式的且无法撤销，导入前请确保数据格式正确。</p>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('import-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitImport()" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认导入</button>
+            </div>
+        </div>
+    </div>
 
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
+    <!-- 9. 设置角色密码 -->
+    <div id="set-pwd-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                <span class="text-base">🔑</span>
+                <h4 class="font-bold text-slate-800 text-sm" id="set-pwd-title">设置角色密码</h4>
+            </div>
+            <p class="text-[11px] text-slate-500 leading-relaxed">密码生效后，本端进行任何消耗该角色CP或使用技能的操作，都会验证该密码，防止对方冒充篡改。</p>
+            <div>
+                <input type="text" id="set-pwd-input" placeholder="输入你要设置的该角色密码" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex justify-end gap-2 text-xs pt-1">
+                <button onclick="closeModal('set-pwd-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitRolePassword()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认密码</button>
+            </div>
+        </div>
+    </div>
 
-// ========== 游戏配置 ==========
-const MAX_UNDO = 3;
-const STORAGE_PREFIX = 'game_lawyer_coder_v32_';
-const DEFAULT_ADMIN_PASSWORD = '8868';
-const SKILL_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-
-let myRole = 'playerA';
-let gameState = null;
-let historyStack = [];
-let selectedCost = 0;
-let selectedBankCost = 0;
-let currentRoomId = null;
-let isSyncing = false;
-let dbRef = null;
-let unlockedRoles = {};
-let cdTimer = null;
-let adminVerified = false;
-
-// ========== 数据标准化 ==========
-function normalizeState(state) {
-    if (!state || typeof state !== 'object') state = {};
-    
-    const defaultPlayer = { role: '', cp: 0, skillUsed: false, skillUsedAt: 0 };
-    state.playerA = state.playerA && typeof state.playerA === 'object' 
-        ? { ...defaultPlayer, ...state.playerA, role: '律师' }
-        : { ...defaultPlayer, role: '律师' };
-    state.playerB = state.playerB && typeof state.playerB === 'object'
-        ? { ...defaultPlayer, ...state.playerB, role: '程序员' }
-        : { ...defaultPlayer, role: '程序员' };
-    
-    state.playerA.cp = Number(state.playerA.cp) || 0;
-    state.playerB.cp = Number(state.playerB.cp) || 0;
-    state.playerA.skillUsed = !!state.playerA.skillUsed;
-    state.playerB.skillUsed = !!state.playerB.skillUsed;
-    state.playerA.skillUsedAt = Number(state.playerA.skillUsedAt) || 0;
-    state.playerB.skillUsedAt = Number(state.playerB.skillUsedAt) || 0;
-    
-    if (!state.passwords || typeof state.passwords !== 'object') {
-        state.passwords = { playerA: '', playerB: '' };
-    } else {
-        state.passwords.playerA = state.passwords.playerA || '';
-        state.passwords.playerB = state.passwords.playerB || '';
-    }
-    
-    if (!state.adminPassword) {
-        state.adminPassword = DEFAULT_ADMIN_PASSWORD;
-    }
-    
-    if (!Array.isArray(state.logs)) {
-        if (state.logs && typeof state.logs === 'object') {
-            state.logs = Object.values(state.logs).filter(item => item && typeof item === 'object');
-        } else {
-            state.logs = [{ type: 'sys', text: '🎉 V3.5 新一局游戏开始！' }];
+    <!-- ==================== 前端逻辑核心 ==================== -->
+    <script>
+        // 初始化 Firebase 配置（此处使用公共默认数据库）
+        const firebaseConfig = {
+            databaseURL: "https://game-theory-v3-default-rtdb.firebaseio.com"
+        };
+        
+        // 尝试初始化
+        if (firebase.apps.length === 0) {
+            firebase.initializeApp(firebaseConfig);
         }
-    }
-    
-    if (!Array.isArray(state.commands)) {
-        if (state.commands && typeof state.commands === 'object') {
-            const keys = Object.keys(state.commands).sort((a, b) => Number(a) - Number(b));
-            state.commands = keys.map(k => state.commands[k]).filter(item => item && typeof item === 'object');
-        } else {
-            state.commands = [];
+        const db = firebase.database();
+
+        // 基础运行状态变量
+        let currentRoom = "PublicDefaultRoom";
+        let localRole = null; // 当前本地选定的身份: 'lawyer' | 'coder' | null
+        let localPasswords = {
+            lawyer: localStorage.getItem('pwd_lawyer_local') || "",
+            coder: localStorage.getItem('pwd_coder_local') || ""
+        };
+        
+        let pendingAction = null; // 待确认或通过密码验证后触发的操作
+        let currentDbState = null; // 同步的最新的状态快照
+
+        // 工具函数：获取当前时间戳
+        const getNow = () => Date.now();
+
+        // 获取房间ID
+        function initRoom() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rId = urlParams.get('room');
+            if (rId && rId.trim() !== "") {
+                currentRoom = rId.trim();
+                document.getElementById('room-display').innerText = "房间: " + currentRoom;
+                startRoomSync();
+            } else {
+                openRoomModal();
+            }
         }
-    }
-    
-    if (!state.currentTurn || (state.currentTurn !== 'playerA' && state.currentTurn !== 'playerB')) {
-        state.currentTurn = 'playerA';
-    }
-    if (!state.version) state.version = '3.5';
-    if (!state.timestamp || typeof state.timestamp !== 'number') {
-        state.timestamp = Date.now();
-    }
-    
-    return state;
-}
 
-function ensureStateReady() {
-    if (!gameState) {
-        gameState = getDefaultState();
-        return false;
-    }
-    gameState = normalizeState(gameState);
-    return true;
-}
+        function startRoomSync() {
+            // 开始实时监听当前房间数据
+            db.ref("rooms/" + currentRoom).on("value", (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    // 初始化一个空房间数据结构
+                    initRoomDefaultData();
+                } else {
+                    currentDbState = data;
+                    renderGame(data);
+                }
+            });
+            updateStatusText("已连接，数据已同步");
+        }
 
-function getDefaultState() {
-    return normalizeState({});
-}
+        // 初始化一局默认游戏数据
+        function initRoomDefaultData() {
+            const initialData = {
+                roomName: currentRoom,
+                createdAt: getNow(),
+                adminPassword: "8868",
+                game: {
+                    lawyer: { cp: 0, pwd: "", skillCooldown: 0 },
+                    coder: { cp: 0, pwd: "", skillCooldown: 0 },
+                    turn: "lawyer",
+                    lastActionTime: getNow(),
+                    gameStatus: "🎉 新一局游戏开始！"
+                },
+                todos: {},
+                logs: {},
+                history: [] // 留着给撤销回滚
+            };
+            // 写入日志
+            const logId = db.ref().push().key;
+            initialData.logs[logId] = {
+                time: getNow(),
+                text: "新房间创建并开启新战局"
+            };
+            db.ref("rooms/" + currentRoom).set(initialData);
+        }
 
-function genRoomId() {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
+        // 状态文字更新
+        function updateStatusText(text) {
+            const el = document.getElementById('conn-status');
+            const txt = document.getElementById('room-display');
+            txt.innerText = "房间: " + currentRoom;
+            el.className = "flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded border border-emerald-200";
+            // 指示灯变绿
+            el.firstElementChild.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
+        }
 
-// ========== 房间系统 ==========
-function getRoomFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('room');
-}
+        // 折叠和展开游戏规则
+        function toggleRules() {
+            const panel = document.getElementById('rules-panel');
+            const arrow = document.getElementById('rule-btn-arrow');
+            const txt = document.getElementById('rule-btn-txt');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                arrow.className = "fa-solid fa-chevron-up text-[10px]";
+                txt.innerText = "V3.5.3 收起";
+            } else {
+                panel.classList.add('hidden');
+                arrow.className = "fa-solid fa-chevron-down text-[10px]";
+                txt.innerText = "📖 游戏规则";
+            }
+        }
 
-function setRoomInUrl(roomId) {
-    const url = new URL(window.location);
-    url.searchParams.set('room', roomId);
-    window.history.replaceState({}, '', url);
-}
-
-function copyRoomLink() {
-    if (!currentRoomId) return showToast('还没有房间');
-    const url = window.location.href;
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(() => {
-            showToast('✅ 房间链接已复制');
-        }).catch(() => fallbackCopy(url));
-    } else {
-        fallbackCopy(url);
-    }
-}
-
-function fallbackCopy(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    document.body.removeChild(ta);
-    showToast('✅ 已复制');
-}
-
-function openRoomModal() {
-    document.getElementById('roomInput').value = currentRoomId || '';
-    document.getElementById('roomModal').classList.add('show');
-    setTimeout(() => document.getElementById('roomInput').focus(), 100);
-}
-
-function closeRoomModal() {
-    document.getElementById('roomModal').classList.remove('show');
-}
-
-function createNewRoom() {
-    const newId = genRoomId();
-    joinRoomById(newId, true);
-    closeRoomModal();
-}
-
-function joinRoom() {
-    const id = document.getElementById('roomInput').value.trim();
-    if (!id) return showToast('请输入房间号');
-    joinRoomById(id, false);
-    closeRoomModal();
-}
-
-function joinRoomById(roomId, isNew) {
-    if (dbRef) dbRef.off();
-    
-    currentRoomId = roomId;
-    setRoomInUrl(roomId);
-    document.getElementById('roomIdDisplay').innerText = '房间: ' + roomId;
-    document.getElementById('syncStatus').innerText = '连接中...';
-    document.getElementById('syncDot').classList.remove('offline');
-    
-    unlockedRoles = {};
-    historyStack = [];
-    updateUndoBtn();
-    
-    dbRef = database.ref('rooms/' + roomId + '/gameState');
-    
-    let firstLoad = true;
-    
-    dbRef.on('value', (snapshot) => {
-        try {
-            const data = snapshot.val();
+        // 渲染对局主体界面
+        function renderGame(data) {
+            if (!data || !data.game) return;
+            const game = data.game;
             
-            if (data) {
-                const normalizedData = normalizeState(data);
+            // CP 点数
+            document.getElementById('cp-lawyer').innerText = game.lawyer.cp;
+            document.getElementById('cp-coder').innerText = game.coder.cp;
+
+            // 回合状态
+            const turnBadge = document.getElementById('turn-badge');
+            if (game.turn === 'lawyer') {
+                turnBadge.innerText = "律师";
+                turnBadge.className = "bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold border border-blue-100";
+            } else {
+                turnBadge.innerText = "程序员";
+                turnBadge.className = "bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded font-bold border border-emerald-100";
+            }
+
+            document.getElementById('game-status-text').innerText = game.gameStatus || "对决中...";
+
+            // 角色密码状态渲染
+            renderRolePwdState('lawyer', game.lawyer.pwd);
+            renderRolePwdState('coder', game.coder.pwd);
+
+            // 本地选中框的高亮标记
+            updateRoleUISelection();
+
+            // 技能冷却倒计时处理
+            processCooldowns(game.lawyer.skillCooldown, game.coder.skillCooldown);
+
+            // 撤销步数限制渲染
+            const undoCount = data.history ? Object.keys(data.history).length : 0;
+            document.getElementById('undo-count').innerText = Math.min(undoCount, 3);
+
+            // 渲染待办命令
+            renderTodos(data.todos);
+
+            // 渲染日志
+            renderLogs(data.logs);
+        }
+
+        // 渲染单个角色密码锁的状态（一次性生效后置灰）
+        function renderRolePwdState(role, cloudPwd) {
+            const btn = document.getElementById(`set-pwd-${role}-btn`);
+            const stateText = document.getElementById(`pwd-state-${role}`);
+            
+            if (cloudPwd && cloudPwd.trim() !== "") {
+                // 已生效置灰
+                btn.disabled = true;
+                btn.className = "text-[10px] text-slate-400 flex items-center gap-0.5 mt-0.5 cursor-not-allowed";
+                stateText.innerText = "🔐 密码已锁定生效";
+            } else {
+                // 未设置
+                btn.disabled = false;
+                if (role === 'lawyer') {
+                    btn.className = "text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 mt-0.5";
+                } else {
+                    btn.className = "text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5 mt-0.5";
+                }
+                stateText.innerText = "🔓 当前角色未设置密码";
+            }
+        }
+
+        // 更新客户端选择角色的外边框高亮
+        function updateRoleUISelection() {
+            const lawyerBox = document.getElementById('role-box-lawyer');
+            const coderBox = document.getElementById('role-box-coder');
+            const lawyerBtn = document.getElementById('role-select-lawyer');
+            const coderBtn = document.getElementById('role-select-coder');
+
+            if (localRole === 'lawyer') {
+                lawyerBox.className = "bg-white border-2 border-blue-500 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-md";
+                coderBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden opacity-60 shadow-sm";
+                lawyerBtn.innerText = "⭐ 我是律师";
+                lawyerBtn.className = "bg-blue-600 text-white text-xs px-2.5 py-1 rounded-lg border border-blue-500 shadow-sm";
+                coderBtn.innerText = "选择我是程序员";
+                coderBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
+            } else if (localRole === 'coder') {
+                lawyerBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden opacity-60 shadow-sm";
+                coderBox.className = "bg-white border-2 border-emerald-500 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-md";
+                lawyerBtn.innerText = "选择我是律师";
+                lawyerBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
+                coderBtn.innerText = "⭐ 我是程序员";
+                coderBtn.className = "bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-lg border border-emerald-500 shadow-sm";
+            } else {
+                lawyerBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm";
+                coderBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm";
+                lawyerBtn.innerText = "选择我是律师";
+                lawyerBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
+                coderBtn.innerText = "选择我是程序员";
+                coderBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
+            }
+        }
+
+        // 本地切换选择自己的身份
+        function selectRole(role) {
+            if (localRole === role) {
+                localRole = null; // 反选
+            } else {
+                localRole = role;
+            }
+            updateRoleUISelection();
+        }
+
+        // 渲染待执行指令
+        function renderTodos(todos) {
+            const listEl = document.getElementById('todo-list');
+            const countEl = document.getElementById('todo-count');
+            
+            if (!todos) {
+                listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">暂无待执行命令</p>`;
+                countEl.innerText = "0";
+                return;
+            }
+
+            const todoKeys = Object.keys(todos);
+            countEl.innerText = todoKeys.length;
+
+            let html = "";
+            todoKeys.sort((a, b) => todos[b].time - todos[a].time).forEach(key => {
+                const todo = todos[key];
+                const isLoan = todo.type === "loan";
+                const borderClass = isLoan ? "border-amber-200 bg-amber-50/50" : "border-indigo-100 bg-slate-50/50";
+                const typeBadge = isLoan 
+                    ? `<span class="bg-amber-50 text-amber-600 text-[9px] px-1.5 py-0.2 rounded border border-amber-200">🏦 贷款待办</span>` 
+                    : `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.2 rounded border border-indigo-200">${todo.level}级指令</span>`;
                 
-                if (firstLoad) {
-                    firstLoad = false;
-                    gameState = normalizedData;
-                    saveToLocal();
-                    renderUI();
-                    updateRoleLockStatus();
-                    document.getElementById('syncStatus').innerText = '已连接';
-                    document.getElementById('syncDot').classList.remove('offline');
+                // 判断谁来勾选确认完成
+                let checkerText = "";
+                let actionBtn = "";
+
+                if (isLoan) {
+                    // 贷款：借钱者自领指令，由对方确认你做完了
+                    checkerText = `<span class="text-[10px] text-slate-500">由 <strong>${todo.sender === 'lawyer' ? '程序员' : '律师'}</strong> 勾选确认</span>`;
+                    actionBtn = `
+                        <button onclick="confirmTodoComplete('${key}')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-[10.5px] px-2.5 py-1 rounded shadow-sm transition shrink-0">
+                            确认对方已做
+                        </button>
+                    `;
+                } else {
+                    // 普通命令：下达者发给对方做，由接收方确认完成
+                    const receiver = todo.sender === "lawyer" ? "coder" : "lawyer";
+                    checkerText = `<span class="text-[10px] text-slate-500">请 <strong>${receiver === 'lawyer' ? '律师' : '程序员'}</strong> 确认完成</span>`;
+                    actionBtn = `
+                        <button onclick="confirmTodoComplete('${key}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10.5px] px-2.5 py-1 rounded shadow-sm transition shrink-0">
+                            我已完成
+                        </button>
+                    `;
+                }
+
+                html += `
+                    <div class="border ${borderClass} rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
+                        <div class="space-y-1 flex-1 min-w-[200px]">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                ${typeBadge}
+                                <span class="text-[10px] text-slate-400">来自 ${todo.sender === 'lawyer' ? '律师' : '程序员'}</span>
+                                ${checkerText}
+                            </div>
+                            <p class="text-slate-800 font-medium">${todo.text}</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            ${actionBtn}
+                        </div>
+                    </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+        }
+
+        // 渲染战斗日志
+        function renderLogs(logs) {
+            const container = document.getElementById('logs-container');
+            if (!logs) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">新一局游戏正在酝酿...</p>`;
+                return;
+            }
+
+            const keys = Object.keys(logs);
+            let html = "";
+            keys.sort((a, b) => logs[b].time - logs[a].time).forEach(k => {
+                const log = logs[k];
+                const dateStr = new Date(log.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                html += `
+                    <div class="flex items-start gap-1.5 text-[11px] leading-relaxed py-0.5 border-b border-slate-100">
+                        <span class="text-slate-400 font-mono shrink-0">${dateStr}</span>
+                        <span class="text-slate-600">${log.text}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // ==================== 专属技能冷却计时器 ====================
+        let lawyerCooldownTimer = null;
+        let coderCooldownTimer = null;
+
+        function processCooldowns(lawyerTime, coderTime) {
+            const now = getNow();
+            
+            // 律师冷却
+            if (lawyerTime && lawyerTime > now) {
+                document.getElementById('cooldown-container-lawyer').classList.remove('hidden');
+                document.getElementById('skill-lawyer-btn').disabled = true;
+                document.getElementById('skill-lawyer-btn').className = "bg-slate-100 text-slate-400 text-[11px] px-2.5 py-0.5 rounded cursor-not-allowed border border-slate-200";
+                runTimer('lawyer', lawyerTime);
+            } else {
+                document.getElementById('cooldown-container-lawyer').classList.add('hidden');
+                document.getElementById('skill-lawyer-btn').disabled = false;
+                document.getElementById('skill-lawyer-btn').className = "bg-blue-600 hover:bg-blue-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition";
+                if (lawyerCooldownTimer) clearInterval(lawyerCooldownTimer);
+            }
+
+            // 程序员冷却
+            if (coderTime && coderTime > now) {
+                document.getElementById('cooldown-container-coder').classList.remove('hidden');
+                document.getElementById('skill-coder-btn').disabled = true;
+                document.getElementById('skill-coder-btn').className = "bg-slate-100 text-slate-400 text-[11px] px-2.5 py-0.5 rounded cursor-not-allowed border border-slate-200";
+                runTimer('coder', coderTime);
+            } else {
+                document.getElementById('cooldown-container-coder').classList.add('hidden');
+                document.getElementById('skill-coder-btn').disabled = false;
+                document.getElementById('skill-coder-btn').className = "bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition";
+                if (coderCooldownTimer) clearInterval(coderCooldownTimer);
+            }
+        }
+
+        function runTimer(role, endTime) {
+            if (role === 'lawyer') {
+                if (lawyerCooldownTimer) clearInterval(lawyerCooldownTimer);
+                lawyerCooldownTimer = setInterval(() => {
+                    const rem = endTime - getNow();
+                    if (rem <= 0) {
+                        clearInterval(lawyerCooldownTimer);
+                        db.ref(`rooms/${currentRoom}/game/lawyer/skillCooldown`).set(0);
+                    } else {
+                        const formatted = formatMs(rem);
+                        document.getElementById('cooldown-time-lawyer').innerText = formatted;
+                        const pct = Math.max(0, Math.min(100, (rem / 86400000) * 100));
+                        document.getElementById('cooldown-bar-lawyer').style.width = pct + "%";
+                    }
+                }, 1000);
+            } else {
+                if (coderCooldownTimer) clearInterval(coderCooldownTimer);
+                coderCooldownTimer = setInterval(() => {
+                    const rem = endTime - getNow();
+                    if (rem <= 0) {
+                        clearInterval(coderCooldownTimer);
+                        db.ref(`rooms/${currentRoom}/game/coder/skillCooldown`).set(0);
+                    } else {
+                        const formatted = formatMs(rem);
+                        document.getElementById('cooldown-time-coder').innerText = formatted;
+                        const pct = Math.max(0, Math.min(100, (rem / 86400000) * 100));
+                        document.getElementById('cooldown-bar-coder').style.width = pct + "%";
+                    }
+                }, 1000);
+            }
+        }
+
+        function formatMs(ms) {
+            const secs = Math.floor(ms / 1000);
+            const hrs = Math.floor(secs / 3600);
+            const mins = Math.floor((secs % 3600) / 60);
+            const remSecs = secs % 60;
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}`;
+        }
+
+        // ==================== 角色密码保护验证机制 ====================
+        function secureExecute(role, actionCallback) {
+            if (!currentDbState || !currentDbState.game) return;
+            const targetRoleData = currentDbState.game[role];
+            
+            // 检查云端是否给该角色设置了密码
+            if (targetRoleData && targetRoleData.pwd && targetRoleData.pwd.trim() !== "") {
+                const savedPwd = localPasswords[role];
+                if (savedPwd === targetRoleData.pwd) {
+                    actionCallback();
+                } else {
+                    pendingAction = { role: role, callback: actionCallback };
+                    openModal('role-auth-modal');
+                }
+            } else {
+                actionCallback();
+            }
+        }
+
+        function submitRoleVerification() {
+            const val = document.getElementById('role-auth-input').value;
+            if (!val || val.trim() === "") {
+                alert("请输入验证密码！");
+                return;
+            }
+            if (!pendingAction) return;
+            
+            const cloudPwd = currentDbState.game[pendingAction.role].pwd;
+            if (val === cloudPwd) {
+                localPasswords[pendingAction.role] = val;
+                localStorage.setItem(`pwd_${pendingAction.role}_local`, val);
+                closeModal('role-auth-modal');
+                
+                const act = pendingAction.callback;
+                pendingAction = null;
+                act();
+            } else {
+                alert("密码错误，操作遭拒绝！");
+            }
+        }
+
+        // 设置角色自己的操作密码
+        let setPwdRoleTarget = null;
+        function openSetPasswordModal(role) {
+            setPwdRoleTarget = role;
+            document.getElementById('set-pwd-title').innerText = `设置${role === 'lawyer' ? '律师' : '程序员'}的操作密码`;
+            document.getElementById('set-pwd-input').value = "";
+            openModal('set-pwd-modal');
+        }
+
+        function submitRolePassword() {
+            const val = document.getElementById('set-pwd-input').value;
+            if (!val || val.trim() === "") {
+                alert("密码不能为空！");
+                return;
+            }
+            if (!setPwdRoleTarget) return;
+
+            backupCurrentState();
+
+            db.ref(`rooms/${currentRoom}/game/${setPwdRoleTarget}/pwd`).set(val).then(() => {
+                localPasswords[setPwdRoleTarget] = val;
+                localStorage.setItem(`pwd_${setPwdRoleTarget}_local`, val);
+                addLog(`👨‍⚖️ ${setPwdRoleTarget === 'lawyer' ? '律师' : '程序员'} 设置了独立操作密码，状态已锁定。`);
+                closeModal('set-pwd-modal');
+            });
+        }
+
+        // ==================== 核心博弈操作 ====================
+        
+        // 1. 打赌获胜
+        function openBetModal() {
+            if (!localRole) {
+                alert("请先在下方身份板勾选选择你是：律师 还是 程序员！");
+                return;
+            }
+            document.getElementById('bet-text').value = "";
+            openModal('bet-modal');
+        }
+
+        function submitBet() {
+            const text = document.getElementById('bet-text').value;
+            if (!text || text.trim() === "") {
+                alert("请输入打赌的具体惩罚内容！");
+                return;
+            }
+            
+            secureExecute(localRole, () => {
+                backupCurrentState();
+                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
+                const currentCp = currentDbState.game[localRole].cp || 0;
+                
+                const updates = {};
+                updates[`/game/${localRole}/cp`] = currentCp + 1;
+                updates[`/game/turn`] = localRole;
+                updates[`/game/gameStatus`] = `🏆 打赌结果出炉，${roleName}胜出！`;
+
+                db.ref(`rooms/${currentRoom}`).update(updates);
+                addLog(`🏆 ${roleName} 赢下了打赌，获得 +1 CP。赌注内容：${text}`);
+                closeModal('bet-modal');
+            });
+        }
+
+        // 2. 银行贷款
+        function openLoanModal() {
+            if (!localRole) {
+                alert("请先勾选你的身份再进行贷款！");
+                return;
+            }
+            document.getElementById('loan-text').value = "";
+            openModal('loan-modal');
+        }
+
+        function submitLoan() {
+            const text = document.getElementById('loan-text').value;
+            if (!text || text.trim() === "") {
+                alert("贷款必须提供作为抵押要完成的命令内容！");
+                return;
+            }
+
+            const levelVal = document.querySelector('input[name="loan-lv"]:checked').value;
+            let loanCp = 1;
+            if (levelVal === "2") loanCp = 2;
+            if (levelVal === "3") loanCp = 4;
+
+            secureExecute(localRole, () => {
+                backupCurrentState();
+                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
+                const currentCp = currentDbState.game[localRole].cp || 0;
+
+                const updates = {};
+                updates[`/game/${localRole}/cp`] = currentCp + loanCp;
+                updates[`/game/gameStatus`] = `🏦 银行向${roleName}发放了 ${loanCp} CP 贷款`;
+
+                const todoKey = db.ref(`rooms/${currentRoom}/todos`).push().key;
+                const newTodo = {
+                    type: "loan",
+                    sender: localRole,
+                    level: levelVal,
+                    text: `【贷款抵押】${text}`,
+                    time: getNow()
+                };
+                updates[`/todos/${todoKey}`] = newTodo;
+
+                db.ref(`rooms/${currentRoom}`).update(updates);
+                
+                addLog(`🏦 ${roleName} 向银行成功抵押贷款，获得 +${loanCp} CP。生成了需自行完成的抵押命令：${text}`);
+                closeModal('loan-modal');
+            });
+        }
+
+        // 3. All in 通吃
+        function triggerAllIn() {
+            if (!localRole) {
+                alert("请先选择你的角色身份！");
+                return;
+            }
+            const myCp = currentDbState.game[localRole].cp || 0;
+            if (myCp <= 0) {
+                alert("你的 CP 点数已为 0，无法发起 All in 狂热博弈！");
+                return;
+            }
+
+            secureExecute(localRole, () => {
+                const targetRole = localRole === 'lawyer' ? 'coder' : 'lawyer';
+                const targetCp = currentDbState.game[targetRole].cp || 0;
+                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
+
+                if (confirm(`⚠️ 狂热博弈：你将消耗身上全部 ${myCp} 点 CP，如果发起成功，将可以夺取对方同等数量的CP（对方不小于此数）。是否继续？`)) {
+                    backupCurrentState();
+                    
+                    const updates = {};
+                    updates[`/game/${localRole}/cp`] = 0;
+                    updates[`/game/gameStatus`] = `🔥 ${roleName} 发起了 All in 豪赌`;
+
+                    const todoKey = db.ref(`rooms/${currentRoom}/todos`).push().key;
+                    const newTodo = {
+                        type: "allin",
+                        sender: localRole,
+                        level: "Allin",
+                        text: `【All in 夺取确认】我自废全部 ${myCp} CP，需对方确认并夺取对方 ${Math.min(myCp, targetCp)} 点 CP 注入我方。`,
+                        time: getNow()
+                    };
+                    updates[`/todos/${todoKey}`] = newTodo;
+
+                    db.ref(`rooms/${currentRoom}`).update(updates);
+                    addLog(`🔥 ${roleName} 破釜沉舟，宣布消耗全部 ${myCp} CP 发起 All in，需对方确认后，将掠夺对方 ${Math.min(myCp, targetCp)} CP。`);
+                }
+            });
+        }
+
+        // 4. 下达普通命令
+        function dispatchCommand() {
+            if (!localRole) {
+                alert("请先选择你的角色身份！");
+                return;
+            }
+            const text = document.getElementById('cmd-text').value;
+            if (!text || text.trim() === "") {
+                alert("下达命令内容不能为空！");
+                return;
+            }
+
+            const levelVal = document.querySelector('input[name="cmd-lv"]:checked').value;
+            let cost = 1;
+            if (levelVal === "2") cost = 2;
+            if (levelVal === "3") cost = 4;
+
+            secureExecute(localRole, () => {
+                const myCp = currentDbState.game[localRole].cp || 0;
+                if (myCp < cost) {
+                    alert(`CP 点数不足！当前等级命令需要消耗 ${cost} CP，你目前仅剩 ${myCp} CP。`);
+                    return;
+                }
+
+                backupCurrentState();
+                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
+                const targetRole = localRole === 'lawyer' ? 'coder' : 'lawyer';
+
+                const updates = {};
+                updates[`/game/${localRole}/cp`] = myCp - cost;
+                updates[`/game/turn`] = targetRole;
+                updates[`/game/gameStatus`] = `⚡ ${roleName} 对目标发起了 ${levelVal} 级指令`;
+
+                const todoKey = db.ref(`rooms/${currentRoom}/todos`).push().key;
+                const newTodo = {
+                    type: "normal",
+                    sender: localRole,
+                    level: levelVal,
+                    text: text,
+                    time: getNow()
+                };
+                updates[`/todos/${todoKey}`] = newTodo;
+
+                db.ref(`rooms/${currentRoom}`).update(updates).then(() => {
+                    document.getElementById('cmd-text').value = "";
+                });
+
+                addLog(`⚡ ${roleName} 消耗了 ${cost} CP，对对方下达了 ${levelVal} 级命令：${text}`);
+            });
+        }
+
+        // 5. 勾选确认待办命令已完成
+        function confirmTodoComplete(key) {
+            if (!currentDbState || !currentDbState.todos) return;
+            const todo = currentDbState.todos[key];
+            if (!todo) return;
+
+            const isLoan = todo.type === "loan";
+            const isAllin = todo.type === "allin";
+            
+            if (!localRole) {
+                alert("确认完成需要明确你的本地身份，请先在下方勾选选择角色！");
+                return;
+            }
+
+            if (isLoan) {
+                if (localRole === todo.sender) {
+                    alert("贷款命令需要对方确认你完成了，你不能自己勾选！");
+                    return;
+                }
+            } else if (isAllin) {
+                if (localRole === todo.sender) {
+                    alert("All in 夺取需要对方点击确认才能生效！");
+                    return;
+                }
+            } else {
+                if (localRole === todo.sender) {
+                    alert("下达命令的人无法帮你完成，请让执行者（对方）确认点击！");
+                    return;
+                }
+            }
+
+            secureExecute(localRole, () => {
+                backupCurrentState();
+                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
+                
+                const updates = {};
+                updates[`/todos/${key}`] = null;
+
+                if (isAllin) {
+                    const senderRole = todo.sender;
+                    const senderRoleName = senderRole === 'lawyer' ? '律师' : '程序员';
+                    const targetCp = currentDbState.game[localRole].cp || 0;
+                    
+                    updates[`/game/${senderRole}/cp`] = targetCp;
+                    updates[`/game/${localRole}/cp`] = 0;
+                    updates[`/game/gameStatus`] = `🔥 All in博弈尘埃落定！${senderRoleName}通吃了${roleName}`;
+                    
+                    addLog(`🔥 All in通吃成功！${roleName} 确认了豪赌并被掠夺。${senderRoleName} 夺取获得 ${targetCp} CP，${roleName} CP归零！`);
+                } else {
+                    updates[`/game/gameStatus`] = `✅ 指令执行完毕`;
+                    addLog(`✅ ${roleName} 勾选消除了命令待办：${todo.text}`);
+                }
+
+                db.ref(`rooms/${currentRoom}`).update(updates);
+            });
+        }
+
+        // ==================== 专属大招发动 ====================
+        
+        // 律师：律师函警告
+        function useLawyerSkill() {
+            if (localRole !== 'lawyer') {
+                alert("你当前身份不是律师，无法发动律师大招！");
+                return;
+            }
+
+            secureExecute('lawyer', () => {
+                if (!currentDbState || !currentDbState.todos) {
+                    alert("对方当前没有待处理的命令，技能无目标可撤回！");
+                    return;
+                }
+
+                const todoKeys = Object.keys(currentDbState.todos);
+                const coderCmds = todoKeys
+                    .map(k => ({ key: k, ...currentDbState.todos[k] }))
+                    .filter(t => t.sender === 'coder' && t.type === 'normal')
+                    .sort((a, b) => b.time - a.time);
+
+                if (coderCmds.length === 0) {
+                    alert("找不到由程序员下达的待执行普通命令，无法发出律师函！");
+                    return;
+                }
+
+                backupCurrentState();
+                const targetCmd = coderCmds[0];
+                let cost = 1;
+                if (targetCmd.level === "2") cost = 2;
+                if (targetCmd.level === "3") cost = 4;
+
+                const currentCoderCp = currentDbState.game.coder.cp || 0;
+
+                const updates = {};
+                updates[`/todos/${targetCmd.key}`] = null;
+                updates[`/game/coder/cp`] = currentCoderCp + cost;
+                updates[`/game/lawyer/skillCooldown`] = getNow() + 86400000;
+                updates[`/game/gameStatus`] = `🛡️ 律师函生效！成功撤销撤销程序员指令`;
+
+                db.ref(`rooms/${currentRoom}`).update(updates);
+                addLog(`🛡️ 律师 发动了大招【律师函警告】！强行撤消了程序员的指令【${targetCmd.text}】，并全额返还了其消耗的 ${cost} CP！`);
+            });
+        }
+
+        // 程序员：致命 Bug
+        function useCoderSkill() {
+            if (localRole !== 'coder') {
+                alert("你当前身份不是程序员，无法发动致命 Bug！");
+                return;
+            }
+
+            secureExecute('coder', () => {
+                const lawyerCp = currentDbState.game.lawyer.cp || 0;
+                if (lawyerCp <= 0) {
+                    alert("律师当前 CP 点数已经为 0，发动 Bug 不起任何作用！");
+                    return;
+                }
+
+                backupCurrentState();
+                const deduct = Math.max(1, Math.round(lawyerCp * 0.3));
+                const newLawyerCp = Math.max(0, lawyerCp - deduct);
+
+                const updates = {};
+                updates[`/game/lawyer/cp`] = newLawyerCp;
+                updates[`/game/coder/skillCooldown`] = getNow() + 86400000;
+                updates[`/game/gameStatus`] = `👾 致命Bug爆发！律师被扣除CP`;
+
+                db.ref(`rooms/${currentRoom}`).update(updates);
+                addLog(`👾 程序员 触发了程序员【致命Bug】！突袭成功，强行扣除律师 ${deduct} 点 CP（30%），并进入24小时冷却。`);
+            });
+        }
+
+        // ==================== 撤销历史核心逻辑 ====================
+        function backupCurrentState() {
+            if (!currentDbState) return;
+            const backup = {
+                game: JSON.parse(JSON.stringify(currentDbState.game)),
+                todos: currentDbState.todos ? JSON.parse(JSON.stringify(currentDbState.todos)) : {},
+                time: getNow()
+            };
+
+            let history = currentDbState.history ? Object.values(currentDbState.history) : [];
+            history.push(backup);
+            if (history.length > 3) {
+                history.shift();
+            }
+
+            db.ref(`rooms/${currentRoom}/history`).set(history);
+        }
+
+        function triggerUndo() {
+            if (!currentDbState || !currentDbState.history) {
+                alert("暂无可撤销的历史记录！");
+                return;
+            }
+
+            const historyList = Object.values(currentDbState.history);
+            if (historyList.length === 0) {
+                alert("已退回到最远可挽回的回合！");
+                return;
+            }
+
+            if (confirm("🔄 你是否确定要回滚撤销上一步操作？")) {
+                const prev = historyList.pop();
+
+                const updates = {
+                    game: prev.game,
+                    todos: prev.todos || {},
+                    history: historyList
+                };
+
+                db.ref(`rooms/${currentRoom}`).update(updates);
+                addLog(`🔄 系统执行了历史撤销：回滚了上一步操作。`);
+            }
+        }
+
+        // ==================== 辅助公共功能 ====================
+        function addLog(text) {
+            const key = db.ref(`rooms/${currentRoom}/logs`).push().key;
+            db.ref(`rooms/${currentRoom}/logs/${key}`).set({
+                time: getNow(),
+                text: text
+            });
+        }
+
+        // 一键复制专属对决链接
+        function copyRoomLink() {
+            const path = window.location.origin + window.location.pathname + "?room=" + currentRoom;
+            navigator.clipboard.writeText(path).then(() => {
+                alert("📋 房间专属链接复制成功！发给另一位玩家进入即可对决：\n" + path);
+            }).catch(err => {
+                alert("复制失败，请手动复制浏览器地址栏链接。");
+            });
+        }
+
+        // ==================== 弹窗管理器 ====================
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function openRoomModal() {
+            document.getElementById('target-room-id').value = currentRoom;
+            openModal('room-init-modal');
+        }
+
+        function generateRandomRoom() {
+            const rand = "Room_" + Math.floor(Math.random() * 89999 + 10000);
+            document.getElementById('target-room-id').value = rand;
+        }
+
+        function joinRoomByInput() {
+            const val = document.getElementById('target-room-id').value;
+            if (!val || val.trim() === "") {
+                alert("请输入房间名");
+                return;
+            }
+            window.location.search = `?room=${val.trim()}`;
+        }
+
+        // ==================== 导入 / 导出系统 ====================
+        function openExportModal() {
+            if (!currentDbState) return;
+            const dataStr = JSON.stringify(currentDbState);
+            const encoded = btoa(encodeURIComponent(dataStr));
+            document.getElementById('export-textarea').value = encoded;
+            openModal('export-modal');
+        }
+
+        function copyExportedText() {
+            const val = document.getElementById('export-textarea').value;
+            navigator.clipboard.writeText(val).then(() => {
+                alert("数据已成功复制到剪贴板，妥善保存它吧！");
+                closeModal('export-modal');
+            });
+        }
+
+        function openImportModal() {
+            document.getElementById('import-textarea').value = "";
+            openModal('import-modal');
+        }
+
+        function submitImport() {
+            const val = document.getElementById('import-textarea').value;
+            if (!val || val.trim() === "") {
+                alert("请输入数据内容");
+                return;
+            }
+
+            try {
+                const decoded = decodeURIComponent(atob(val.trim()));
+                const parsed = JSON.parse(decoded);
+                if (!parsed.game || !parsed.adminPassword) {
+                    throw new Error("格式无效");
+                }
+
+                if (confirm("⚠️ 确定要将该导出的数据导入当前房间吗？这会覆盖所有的进度！")) {
+                    db.ref(`rooms/${currentRoom}`).set(parsed).then(() => {
+                        alert("🎉 数据导入并且成功同步更新！");
+                        closeModal('import-modal');
+                    });
+                }
+            } catch (e) {
+                alert("❌ 解析导入数据失败！请确保数据是完整复制导出的加密字串。");
+            }
+        }
+
+        // ==================== 管理设置系统逻辑 ====================
+        let authenticatedAdmin = false;
+
+        function reqAdminAccess() {
+            if (authenticatedAdmin) {
+                openModal('admin-modal');
+                document.getElementById('admin-auth').classList.add('hidden');
+                document.getElementById('admin-content').classList.remove('hidden');
+                refreshRoomList();
+            } else {
+                document.getElementById('admin-pwd-input').value = "";
+                openModal('admin-modal');
+                document.getElementById('admin-auth').classList.remove('hidden');
+                document.getElementById('admin-content').classList.add('hidden');
+            }
+        }
+
+        function verifyAdmin() {
+            const val = document.getElementById('admin-pwd-input').value;
+            const truePwd = currentDbState.adminPassword || "8868";
+
+            if (val === truePwd) {
+                authenticatedAdmin = true;
+                document.getElementById('admin-auth').classList.add('hidden');
+                document.getElementById('admin-content').classList.remove('hidden');
+                refreshRoomList();
+            } else {
+                alert("密码错误，验证失败！");
+            }
+        }
+
+        function refreshRoomList() {
+            const tbody = document.getElementById('rooms-tbody');
+            tbody.innerHTML = `<tr><td colspan="3" class="text-center py-2 text-slate-400 text-[10px]"><i class="fa-solid fa-spinner animate-spin"></i> 加载中...</td></tr>`;
+            
+            db.ref("rooms").once("value", (snapshot) => {
+                const allRooms = snapshot.val();
+                if (!allRooms) {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-2 text-slate-400 text-[10px]">无房间列表</td></tr>`;
+                    return;
+                }
+
+                let html = "";
+                Object.keys(allRooms).forEach(name => {
+                    const isCurrent = name === currentRoom;
+                    html += `
+                        <tr class="hover:bg-slate-50 text-[10.5px] ${isCurrent ? 'bg-indigo-50/50' : ''}">
+                            <td class="py-1 px-1.5 text-center">
+                                <input type="checkbox" name="room-select-chk" value="${name}" class="accent-indigo-600 text-[10px] transform scale-90">
+                            </td>
+                            <td class="py-1 px-1.5 font-medium truncate max-w-[150px] text-slate-700">
+                                ${name} ${isCurrent ? '<span class="text-[9px] text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100">当前</span>' : ''}
+                            </td>
+                            <td class="py-1 px-1.5 text-right space-x-1">
+                                <button onclick="quickJoinRoom('${name}')" class="text-indigo-600 hover:underline" title="切换进入">进入</button>
+                                <button onclick="deleteSingleRoom('${name}')" class="text-rose-600 hover:underline" title="强制删除">删除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html;
+            });
+        }
+
+        function toggleAllRooms(btn) {
+            const chks = document.querySelectorAll('input[name="room-select-chk"]');
+            let anyUnchecked = false;
+            chks.forEach(c => { if (!c.checked) anyUnchecked = true; });
+
+            chks.forEach(c => {
+                c.checked = anyUnchecked;
+            });
+            btn.innerText = anyUnchecked ? "取消全选" : "全选";
+        }
+
+        function bulkDeleteRooms() {
+            const selected = [];
+            document.querySelectorAll('input[name="room-select-chk"]:checked').forEach(c => {
+                selected.push(c.value);
+            });
+
+            if (selected.length === 0) {
+                alert("未选择任何房间！");
+                return;
+            }
+
+            if (confirm(`⚠️ 危险操作：你确定要批量强行删除选中的 ${selected.length} 个房间的数据吗？此操作无法恢复！`)) {
+                const promises = selected.map(name => db.ref(`rooms/${name}`).remove());
+                Promise.all(promises).then(() => {
+                    alert("批量删除房间完成！");
+                    refreshRoomList();
+                    if (selected.includes(currentRoom)) {
+                        window.location.search = "";
+                    }
+                });
+            }
+        }
+
+        function deleteSingleRoom(name) {
+            if (confirm(`确定要强行抹除房间 [${name}] 的所有对战记录数据吗？`)) {
+                db.ref(`rooms/${name}`).remove().then(() => {
+                    alert("房间已成功移除！");
+                    refreshRoomList();
+                    if (name === currentRoom) {
+                        window.location.search = "";
+                    }
+                });
+            }
+        }
+
+        function quickJoinRoom(name) {
+            window.location.search = `?room=${name}`;
+        }
+
+        function createNewRoom() {
+            const val = document.getElementById('new-room-input').value;
+            if (!val || val.trim() === "") {
+                alert("房间名不可为空！");
+                return;
+            }
+            const rId = val.trim();
+            db.ref(`rooms/${rId}`).once("value", (snap) => {
+                if (snap.exists()) {
+                    alert("该房间号已经存在，不能重复创建！");
                     return;
                 }
                 
-                if (!isSyncing && normalizedData.timestamp > (gameState ? gameState.timestamp : 0)) {
-                    gameState = normalizedData;
-                    saveToLocal();
-                    renderUI();
-                    updateRoleLockStatus();
-                    showToast('🔄 对方有新操作');
-                }
-            } else if (isNew && firstLoad) {
-                firstLoad = false;
-                gameState = getDefaultState();
-                pushToFirebase();
+                const initialData = {
+                    roomName: rId,
+                    createdAt: getNow(),
+                    adminPassword: "8868",
+                    game: {
+                        lawyer: { cp: 0, pwd: "", skillCooldown: 0 },
+                        coder: { cp: 0, pwd: "", skillCooldown: 0 },
+                        turn: "lawyer",
+                        lastActionTime: getNow(),
+                        gameStatus: "🎉 新建房间开始！"
+                    },
+                    todos: {},
+                    logs: {
+                        "init": { time: getNow(), text: `管理员创建了新房间 ${rId}` }
+                    }
+                };
+                db.ref(`rooms/${rId}`).set(initialData).then(() => {
+                    alert("新房间创建完成！");
+                    document.getElementById('new-room-input').value = "";
+                    refreshRoomList();
+                });
+            });
+        }
+
+        function resetCurrentRoomData() {
+            if (confirm("🔄 你真的要重置当前房间的所有CP值、技能冷却、密码锁定和待执行命令吗？")) {
+                backupCurrentState();
+                initRoomDefaultData();
+                alert("当前房间已被完全重置并注入新对局！");
+                closeModal('admin-modal');
             }
-            
-            document.getElementById('syncStatus').innerText = '已连接';
-            document.getElementById('syncDot').classList.remove('offline');
-        } catch (e) {
-            console.error('数据解析错误:', e);
-            document.getElementById('syncStatus').innerText = '数据异常';
-            document.getElementById('syncDot').classList.add('offline');
-            showToast('数据解析失败，请刷新重试');
         }
-    }, (error) => {
-        console.error('Firebase error:', error);
-        document.getElementById('syncStatus').innerText = '连接失败';
-        document.getElementById('syncDot').classList.add('offline');
-        showToast('连接失败，请检查数据库规则');
-    });
-    
-    loadLocalState();
-    if (!gameState) {
-        gameState = getDefaultState();
-    }
-    renderUI();
-    updateRoleLockStatus();
-    
-    showToast('已进入房间 ' + roomId);
-}
 
-function pushToFirebase() {
-    if (!dbRef) return;
-    isSyncing = true;
-    gameState.timestamp = Date.now();
-    
-    dbRef.set(gameState).then(() => {
-        setTimeout(() => { isSyncing = false; }, 500);
-    }).catch(err => {
-        console.error('Write error:', err);
-        isSyncing = false;
-        showToast('同步失败，请检查网络');
-    });
-}
-
-// ========== 本地存储 ==========
-function saveToLocal() {
-    if (!currentRoomId) return;
-    try {
-        localStorage.setItem(STORAGE_PREFIX + currentRoomId, JSON.stringify(gameState));
-    } catch (e) {
-        console.warn('本地存储失败:', e);
-    }
-}
-
-function loadLocalState() {
-    if (!currentRoomId) return false;
-    const local = localStorage.getItem(STORAGE_PREFIX + currentRoomId);
-    if (local) {
-        try {
-            gameState = normalizeState(JSON.parse(local));
-            return true;
-        } catch (e) {
-            console.warn('本地数据解析失败:', e);
-        }
-    }
-    return false;
-}
-
-function saveAndRender() {
-    ensureStateReady();
-    saveToLocal();
-    pushToFirebase();
-    renderUI();
-}
-
-// ========== 撤销 ==========
-function pushHistory() {
-    ensureStateReady();
-    historyStack.push(JSON.parse(JSON.stringify(gameState)));
-    if (historyStack.length > MAX_UNDO) historyStack.shift();
-    updateUndoBtn();
-}
-
-function updateUndoBtn() {
-    const btn = document.getElementById('undoBtn');
-    const left = document.getElementById('undoLeft');
-    btn.disabled = historyStack.length === 0;
-    left.innerText = historyStack.length;
-}
-
-function undoAction() {
-    if (historyStack.length === 0) return showToast('没有可撤销的操作');
-    if (!confirm('确定撤销上一步操作？')) return;
-    
-    const prevState = historyStack.pop();
-    gameState = normalizeState(prevState);
-    addLog('undo', '↩️ 撤销了上一步操作');
-    saveAndRender();
-    showToast('已撤销');
-}
-
-// ========== 日志与回合 ==========
-function addLog(type, text) {
-    ensureStateReady();
-    gameState.logs.push({ type: type || 'sys', text: text || '' });
-    if (gameState.logs.length > 50) gameState.logs.shift();
-}
-
-function switchTurn() {
-    gameState.currentTurn = gameState.currentTurn === 'playerA' ? 'playerB' : 'playerA';
-}
-
-// ========== 规则折叠 ==========
-function toggleRule() {
-    document.getElementById('ruleContent').classList.toggle('open');
-}
-
-// ========== 命令等级选择 ==========
-function selectCmdCost(num) {
-    selectedCost = num;
-    ['cost1','cost2','cost4'].forEach(id => document.getElementById(id).classList.remove('selected'));
-    document.getElementById('cost' + (num === 4 ? '4' : num)).classList.add('selected');
-}
-
-function selectBankCost(num) {
-    selectedBankCost = num;
-    ['bankCost1','bankCost2','bankCost4'].forEach(id => document.getElementById(id).classList.remove('selected'));
-    document.getElementById('bankCost' + (num === 4 ? '4' : num)).classList.add('selected');
-}
-
-// ========== 技能冷却 ==========
-function getSkillCooldownInfo(roleKey) {
-    const player = gameState[roleKey];
-    if (!player.skillUsed || !player.skillUsedAt) {
-        return { ready: true, remaining: 0, percent: 100 };
-    }
-    const elapsed = Date.now() - player.skillUsedAt;
-    if (elapsed >= SKILL_COOLDOWN_MS) {
-        return { ready: true, remaining: 0, percent: 100 };
-    }
-    const remaining = SKILL_COOLDOWN_MS - elapsed;
-    const percent = (elapsed / SKILL_COOLDOWN_MS) * 100;
-    return { ready: false, remaining, percent };
-}
-
-function formatTime(ms) {
-    if (ms <= 0) return '可用';
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-    if (hours > 0) {
-        return `${hours}时${minutes}分后可用`;
-    } else if (minutes > 0) {
-        return `${minutes}分${seconds}秒后可用`;
-    } else {
-        return `${seconds}秒后可用`;
-    }
-}
-
-function checkSkillCooldownReset() {
-    if (!gameState) return;
-    let changed = false;
-    ['playerA', 'playerB'].forEach(role => {
-        const info = getSkillCooldownInfo(role);
-        if (info.ready && gameState[role].skillUsed) {
-            gameState[role].skillUsed = false;
-            gameState[role].skillUsedAt = 0;
-            changed = true;
-        }
-    });
-    if (changed) {
-        saveAndRender();
-    }
-}
-
-function startCooldownTimer() {
-    if (cdTimer) clearInterval(cdTimer);
-    cdTimer = setInterval(() => {
-        if (!gameState) return;
-        checkSkillCooldownReset();
-        updateCooldownUI();
-    }, 1000);
-}
-
-function updateCooldownUI() {
-    if (!gameState) return;
-    
-    ['A', 'B'].forEach(suffix => {
-        const roleKey = 'player' + suffix;
-        const info = getSkillCooldownInfo(roleKey);
-        const btn = document.getElementById('btnSkill' + suffix);
-        const bar = document.getElementById('cdBar' + suffix);
-        const fill = document.getElementById('cdFill' + suffix);
-        const text = document.getElementById('cdText' + suffix);
-        
-        if (info.ready) {
-            btn.disabled = gameState[roleKey].skillUsed;
-            bar.style.display = 'none';
-            text.style.display = 'none';
-        } else {
-            btn.disabled = true;
-            bar.style.display = 'block';
-            fill.style.width = info.percent + '%';
-            text.style.display = 'block';
-            text.innerText = '⏱️ ' + formatTime(info.remaining);
-        }
-    });
-}
-
-// ========== 角色密码 ==========
-let pendingRoleSwitch = null;
-
-function updateRoleLockStatus() {
-    const statusEl = document.getElementById('roleLockStatus');
-    const pwd = gameState && gameState.passwords ? gameState.passwords[myRole] : '';
-    const isUnlocked = unlockedRoles[myRole];
-    
-    if (pwd) {
-        if (isUnlocked) {
-            statusEl.className = 'role-lock-status';
-            statusEl.innerText = '🔓 已解锁，可正常操作';
-        } else {
-            statusEl.className = 'role-lock-status locked';
-            statusEl.innerText = '🔒 已设置密码，操作需验证';
-        }
-    } else {
-        statusEl.className = 'role-lock-status';
-        statusEl.innerText = '🔓 未设置密码，建议设置保护';
-    }
-}
-
-function onRoleSelectChange() {
-    const targetRole = document.getElementById('roleSelect').value;
-    if (targetRole === myRole) return;
-    
-    const targetPwd = gameState && gameState.passwords ? gameState.passwords[targetRole] : '';
-    
-    if (targetPwd && !unlockedRoles[targetRole]) {
-        pendingRoleSwitch = targetRole;
-        document.getElementById('rolePwdTitle').innerText = '🔐 角色密码验证';
-        document.getElementById('rolePwdDesc').innerText = '该角色已设置密码，请输入验证后切换';
-        document.getElementById('rolePwdInput').value = '';
-        document.getElementById('rolePwdConfirmBtn').className = 'modal-confirm';
-        document.getElementById('rolePwdConfirmBtn').innerText = '验证';
-        document.getElementById('rolePwdModal').classList.add('show');
-        setTimeout(() => document.getElementById('rolePwdInput').focus(), 100);
-    } else {
-        // 无密码或已解锁，直接切换
-        myRole = targetRole;
-        renderUI();
-        updateRoleLockStatus();
-        updateRolePwdBtnStatus();
-    }
-}
-
-function closeRolePwdModal() {
-    document.getElementById('rolePwdModal').classList.remove('show');
-    document.getElementById('roleSelect').value = myRole;
-    pendingRoleSwitch = null;
-}
-
-function confirmRolePwd() {
-    const input = document.getElementById('rolePwdInput').value.trim();
-    const targetRole = pendingRoleSwitch;
-    
-    if (!targetRole) {
-        closeRolePwdModal();
-        return;
-    }
-    
-    const currentPwd = gameState.passwords[targetRole];
-    
-    if (!currentPwd) {
-        if (!input) return showToast('请输入密码');
-        if (input.length < 2) return showToast('密码至少2位');
-        
-        gameState.passwords[targetRole] = input;
-        unlockedRoles[targetRole] = true;
-        myRole = targetRole;
-        
-        const roleName = targetRole === 'playerA' ? '律师' : '程序员';
-        addLog('sys', `🔐 ${roleName} 设置了角色密码`);
-        
-        saveAndRender();
-        updateRoleLockStatus();
-        closeRolePwdModal();
-        showToast('✅ 密码设置成功');
-    } else {
-        if (input === currentPwd) {
-            unlockedRoles[targetRole] = true;
-            myRole = targetRole;
-            renderUI();
-            updateRoleLockStatus();
-            closeRolePwdModal();
-            showToast('✅ 验证通过');
-        } else {
-            showToast('❌ 密码错误');
-            document.getElementById('rolePwdInput').value = '';
-            document.getElementById('rolePwdInput').focus();
-        }
-    }
-}
-
-function checkRolePermission() {
-    if (!gameState) return false;
-    const pwd = gameState.passwords[myRole];
-    if (pwd && !unlockedRoles[myRole]) {
-        pendingRoleSwitch = myRole;
-        document.getElementById('rolePwdTitle').innerText = '🔐 角色密码验证';
-        document.getElementById('rolePwdDesc').innerText = '该操作需要验证角色密码';
-        document.getElementById('rolePwdInput').value = '';
-        document.getElementById('rolePwdConfirmBtn').className = 'modal-confirm';
-        document.getElementById('rolePwdConfirmBtn').innerText = '验证';
-        document.getElementById('rolePwdModal').classList.add('show');
-        setTimeout(() => document.getElementById('rolePwdInput').focus(), 100);
-        return false;
-    }
-    return true;
-}
-
-// ========== 管理设置 ==========
-function openAdminModal() {
-    document.getElementById('adminVerifyInput').value = '';
-    document.getElementById('adminContent').style.display = 'none';
-    document.getElementById('newAdminPwd').value = '';
-    adminVerified = false;
-    document.getElementById('adminModal').classList.add('show');
-    setTimeout(() => document.getElementById('adminVerifyInput').focus(), 100);
-}
-
-function closeAdminModal() {
-    document.getElementById('adminModal').classList.remove('show');
-}
-
-function verifyAdmin() {
-    const input = document.getElementById('adminVerifyInput').value.trim();
-    const adminPwd = gameState.adminPassword || DEFAULT_ADMIN_PASSWORD;
-    
-    if (input === adminPwd) {
-        adminVerified = true;
-        document.getElementById('adminContent').style.display = 'block';
-        document.getElementById('newAdminPwd').value = '';
-        // 填充角色密码显示框
-        document.getElementById('lawyerPwdDisplay').value = gameState.passwords.playerA || '';
-        document.getElementById('coderPwdDisplay').value = gameState.passwords.playerB || '';
-        loadAllRooms();
-        showToast('✅ 验证通过');
-    } else {
-        showToast('❌ 管理员密码错误');
-        document.getElementById('adminVerifyInput').value = '';
-        document.getElementById('adminVerifyInput').focus();
-    }
-}
-
-function changeAdminPwd() {
-    const newPwd = document.getElementById('newAdminPwd').value.trim();
-    if (!newPwd) return showToast('请输入新密码');
-    if (newPwd.length < 2) return showToast('密码至少2位');
-    
-    gameState.adminPassword = newPwd;
-    addLog('sys', `🔑 管理员密码已修改`);
-    saveAndRender();
-    showToast('✅ 密码修改成功');
-    document.getElementById('newAdminPwd').value = '';
-}
-
-// ========== 管理员：房间列表管理 ==========
-function loadAllRooms() {
-    const listEl = document.getElementById('adminRoomList');
-    listEl.innerHTML = '<div class="room-list-empty">加载中...</div>';
-    
-    const roomsRef = database.ref('rooms');
-    roomsRef.once('value', (snapshot) => {
-        const data = snapshot.val();
-        if (!data) {
-            listEl.innerHTML = '<div class="room-list-empty">暂无房间</div>';
-            return;
-        }
-        
-        const roomIds = Object.keys(data).sort((a, b) => {
-            const tsA = data[a]?.gameState?.timestamp || 0;
-            const tsB = data[b]?.gameState?.timestamp || 0;
-            return tsB - tsA;
-        });
-        
-        if (roomIds.length === 0) {
-            listEl.innerHTML = '<div class="room-list-empty">暂无房间</div>';
-            return;
-        }
-        
-        listEl.innerHTML = roomIds.map(roomId => {
-            const gs = data[roomId]?.gameState || {};
-            const cpA = gs.playerA?.cp || 0;
-            const cpB = gs.playerB?.cp || 0;
-            const isCurrent = roomId === currentRoomId;
-            const time = gs.timestamp ? new Date(gs.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '未知';
-            
-            return `
-                <div class="room-list-item ${isCurrent ? 'current' : ''}">
-                    <input type="checkbox" class="room-checkbox" data-room-id="${roomId}" ${isCurrent ? 'disabled' : ''}>
-                    <div class="room-list-info">
-                        <div class="room-list-id">${roomId} ${isCurrent ? '（当前）' : ''}</div>
-                        <div class="room-list-meta">律师${cpA}CP · 程序员${cpB}CP · ${time}</div>
-                    </div>
-                    <div class="room-list-actions">
-                        <button class="btn-copy" onclick="adminCopyRoomLink('${roomId}')">复制</button>
-                        <button class="btn-enter" onclick="adminEnterRoom('${roomId}')">进入</button>
-                        <button class="btn-delete" onclick="adminDeleteRoom('${roomId}')">删除</button>
-                    </div>
-                </div>
-            `;
-        }).join('');
-        
-    }, (error) => {
-        console.error('加载房间列表失败:', error);
-        listEl.innerHTML = '<div class="room-list-empty" style="color:#ef4444;">加载失败<br><span style="font-size:10px;">请检查Firebase安全规则是否允许读取 /rooms 节点</span></div>';
-    });
-}
-
-function adminCopyRoomLink(roomId) {
-    const url = window.location.origin + window.location.pathname + '?room=' + roomId;
-    // 优先使用现代API（需要安全上下文）
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(url).then(() => {
-            showToast('✅ 链接已复制');
-        }).catch(() => {
-            fallbackCopyInModal(url);
-        });
-    } else {
-        fallbackCopyInModal(url);
-    }
-}
-
-// 弹窗内专用的复制方法（确保textarea在正确的上下文中，解决复制失效问题）
-function fallbackCopyInModal(text) {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.left = '0';
-    ta.style.top = '0';
-    ta.style.width = '1px';
-    ta.style.height = '1px';
-    ta.style.opacity = '0';
-    ta.style.pointerEvents = 'none';
-    ta.setAttribute('readonly', '');
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    ta.setSelectionRange(0, ta.value.length);
-    
-    try {
-        const successful = document.execCommand('copy');
-        if (successful) {
-            showToast('✅ 已复制');
-        } else {
-            showToast('❌ 复制失败，请手动复制');
-        }
-    } catch (err) {
-        showToast('❌ 复制失败，请手动复制');
-    }
-    
-    document.body.removeChild(ta);
-}
-
-function adminCopyCurrentLink() {
-    copyRoomLink();
-}
-
-function adminEnterRoom(roomId) {
-    if (!confirm('确定进入房间 ' + roomId + '？')) return;
-    closeAdminModal();
-    joinRoomById(roomId, false);
-}
-
-function adminDeleteRoom(roomId) {
-    if (roomId === currentRoomId) {
-        if (!confirm('确定删除当前房间？删除后将新建一个空白房间。')) return;
-    } else {
-        if (!confirm('确定删除房间 ' + roomId + '？此操作不可撤销！')) return;
-    }
-    
-    const roomRef = database.ref('rooms/' + roomId);
-    roomRef.remove().then(() => {
-        showToast('✅ 房间已删除');
-        loadAllRooms();
-        
-        if (roomId === currentRoomId) {
-            const newId = genRoomId();
-            joinRoomById(newId, true);
-        }
-    }).catch(err => {
-        console.error('删除失败:', err);
-        showToast('❌ 删除失败，请检查权限');
-    });
-}
-
-// ========== 角色密码管理 ==========
-function togglePwdVisibility(inputId) {
-    const input = document.getElementById(inputId);
-    if (input.type === 'password') {
-        input.type = 'text';
-    } else {
-        input.type = 'password';
-    }
-}
-
-function changeRolePwd(role) {
-    const roleName = role === 'playerA' ? '律师' : '程序员';
-    const newPwd = prompt('请输入' + roleName + '的新密码：');
-    if (newPwd === null) return; // 取消
-    if (!newPwd.trim()) return showToast('密码不能为空');
-    if (newPwd.length < 2) return showToast('密码至少2位');
-    
-    gameState.passwords[role] = newPwd.trim();
-    // 解锁该角色
-    unlockedRoles[role] = true;
-    
-    // 更新显示
-    const displayId = role === 'playerA' ? 'lawyerPwdDisplay' : 'coderPwdDisplay';
-    document.getElementById(displayId).value = newPwd.trim();
-    
-    addLog('sys', `🔑 管理员修改了${roleName}的角色密码`);
-    saveAndRender();
-    updateRoleLockStatus();
-    showToast('✅ ' + roleName + '密码修改成功');
-}
-
-function resetRolePwd(role) {
-    const roleName = role === 'playerA' ? '律师' : '程序员';
-    if (!confirm('确定重置' + roleName + '的密码？重置后该角色将无需密码即可操作。')) return;
-    
-    gameState.passwords[role] = '';
-    unlockedRoles[role] = true;
-    
-    // 更新显示
-    const displayId = role === 'playerA' ? 'lawyerPwdDisplay' : 'coderPwdDisplay';
-    document.getElementById(displayId).value = '';
-    
-    addLog('sys', `🔑 管理员重置了${roleName}的角色密码`);
-    saveAndRender();
-    updateRoleLockStatus();
-    showToast('✅ ' + roleName + '密码已重置');
-}
-
-// ========== 批量删除房间 ==========
-function toggleSelectAllRooms(checkbox) {
-    const checkboxes = document.querySelectorAll('.room-checkbox:not(:disabled)');
-    checkboxes.forEach(cb => {
-        cb.checked = checkbox.checked;
-    });
-}
-
-function batchDeleteRooms() {
-    const checkboxes = document.querySelectorAll('.room-checkbox:checked:not(:disabled)');
-    if (checkboxes.length === 0) {
-        return showToast('请先选择要删除的房间');
-    }
-    
-    if (!confirm('确定删除选中的 ' + checkboxes.length + ' 个房间？此操作不可撤销！')) return;
-    
-    const roomIds = Array.from(checkboxes).map(cb => cb.dataset.roomId);
-    let deletedCount = 0;
-    let failCount = 0;
-    
-    // 逐个删除房间
-    roomIds.forEach(roomId => {
-        const roomRef = database.ref('rooms/' + roomId);
-        roomRef.remove().then(() => {
-            deletedCount++;
-            if (deletedCount + failCount === roomIds.length) {
-                showToast(`✅ 已删除 ${deletedCount} 个房间`);
-                loadAllRooms();
-                // 重置全选框
-                document.getElementById('selectAllRooms').checked = false;
+        function changeAdminPassword() {
+            const val = document.getElementById('new-admin-pwd').value;
+            if (!val || val.trim() === "") {
+                alert("新密码不可为空！");
+                return;
             }
-        }).catch(err => {
-            console.error('删除失败:', err);
-            failCount++;
-            if (deletedCount + failCount === roomIds.length) {
-                showToast(`删除完成：成功 ${deletedCount} 个，失败 ${failCount} 个`);
-                loadAllRooms();
-            }
-        });
-    });
-}
-
-function adminCreateRoom() {
-    const newId = genRoomId();
-    const newState = getDefaultState();
-    const newRef = database.ref('rooms/' + newId + '/gameState');
-    newRef.set(newState).then(() => {
-        showToast('✅ 房间已创建：' + newId);
-        loadAllRooms();
-    }).catch(err => {
-        console.error('创建失败:', err);
-        showToast('❌ 创建失败');
-    });
-}
-
-function adminResetRoom() {
-    if (!confirm('确定重置当前房间？所有CP、命令、日志将清零，角色密码保留！')) return;
-    
-    pushHistory();
-    const savedPasswords = { ...gameState.passwords };
-    const savedAdminPwd = gameState.adminPassword || DEFAULT_ADMIN_PASSWORD;
-    
-    gameState = getDefaultState();
-    gameState.passwords = savedPasswords;
-    gameState.adminPassword = savedAdminPwd;
-    
-    selectedCost = 0;
-    selectedBankCost = 0;
-    document.querySelectorAll('.cmd-btns .btn').forEach(b => b.classList.remove('selected'));
-    
-    saveAndRender();
-    updateRoleLockStatus();
-    showToast('已重置');
-}
-
-// ========== 数据导入导出 ==========
-function openExportModal() {
-    if (!gameState) return showToast('暂无数据');
-    ensureStateReady();
-    const exportObj = {
-        _v: '3.5',
-        _exportAt: Date.now(),
-        gameState: gameState
-    };
-    const dataStr = JSON.stringify(exportObj, null, 2);
-    document.getElementById('exportData').value = dataStr;
-    document.getElementById('exportModal').classList.add('show');
-}
-
-function closeExportModal() {
-    document.getElementById('exportModal').classList.remove('show');
-}
-
-	function copyExportData() {
-    const data = document.getElementById('exportData').value;
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(data).then(() => {
-            showToast('✅ 数据已复制');
-        }).catch(() => fallbackCopy(data));
-    } else {
-        fallbackCopy(data);
-    }
-}
-
-function openImportModal() {
-    document.getElementById('importData').value = '';
-    document.getElementById('importModal').classList.add('show');
-    setTimeout(() => document.getElementById('importData').focus(), 100);
-}
-
-function closeImportModal() {
-    document.getElementById('importModal').classList.remove('show');
-}
-
-function confirmImport() {
-    const dataStr = document.getElementById('importData').value.trim();
-    if (!dataStr) return showToast('请粘贴数据');
-    
-    try {
-        const importObj = JSON.parse(dataStr);
-        let importedState;
-        
-        if (importObj.gameState) {
-            importedState = importObj.gameState;
-        } else {
-            importedState = importObj;
+            db.ref(`rooms/${currentRoom}/adminPassword`).set(val.trim()).then(() => {
+                alert("管理员授权密码修改成功！");
+                document.getElementById('new-admin-pwd').value = "";
+            });
         }
-        
-        if (!importedState || typeof importedState !== 'object') {
-            throw new Error('数据格式错误');
-        }
-        
-        if (!confirm('确认导入？当前房间所有数据将被覆盖！')) return;
-        
-        pushHistory();
-        
-        gameState = normalizeState(importedState);
-        addLog('sys', `📥 导入了房间数据（版本 ${importedState.version || '未知'}）`);
-        
-        saveAndRender();
-        updateRoleLockStatus();
-        
-        // 修复连接状态：导入后强制刷新
-        document.getElementById('syncStatus').innerText = '已连接';
-        document.getElementById('syncDot').classList.remove('offline');
-        unlockedRoles = {}; // 导入后需要重新验证角色密码
-        
-        closeImportModal();
-        showToast('✅ 导入成功，角色密码需重新验证');
-        
-    } catch (e) {
-        console.error('Import error:', e);
-        showToast('❌ 数据格式错误');
-    }
-}
 
-// ========== 渲染UI ==========
-function renderUI() {
-    if (!gameState) return;
-    
-    const cpA = gameState.playerA.cp;
-    const cpB = gameState.playerB.cp;
-    
-    document.getElementById('cpA').innerText = cpA;
-    document.getElementById('cpB').innerText = cpB;
-    document.getElementById('cpA').classList.toggle('negative', cpA < 0);
-    document.getElementById('cpB').classList.toggle('negative', cpB < 0);
-    
-    const infoA = getSkillCooldownInfo('playerA');
-    const infoB = getSkillCooldownInfo('playerB');
-    document.getElementById('btnSkillA').disabled = !infoA.ready;
-    document.getElementById('btnSkillB').disabled = !infoB.ready;
-    
-    updateCooldownUI();
-
-    const turnName = gameState.currentTurn === 'playerA' ? '律师' : '程序员';
-    document.getElementById('turnIndicator').innerText = '🎲 当前回合：' + turnName;
-
-    document.getElementById('cardA').classList.toggle('active', myRole === 'playerA');
-    document.getElementById('cardB').classList.toggle('active', myRole === 'playerB');
-
-    const logBox = document.getElementById('logBox');
-    const logs = gameState.logs || [];
-    logBox.innerHTML = logs.map(l => 
-        `<div class="log-item log-${l.type || 'sys'}">${l.text || ''}</div>`
-    ).join('');
-    logBox.scrollTop = logBox.scrollHeight;
-
-    const cmds = gameState.commands || [];
-    document.getElementById('cmdCount').innerText = cmds.length;
-    const list = document.getElementById('cmdList');
-    if (cmds.length > 0) {
-        list.innerHTML = cmds.map((cmd, i) => {
-            const isBank = cmd.isBank;
-            const isAllIn = cmd.isAllIn;
-            const targetRole = cmd.target || (isBank ? cmd.from : '');
-            const targetName = targetRole === 'playerA' ? '律师' : '程序员';
-            const fromName = (cmd.from === 'playerA' ? '律师' : '程序员');
-            
-            let canCheck = false;
-            let tagHtml = '';
-            let metaText = '';
-            let tipHtml = '';
-            
-            if (isAllIn) {
-                // All in 申请
-                canCheck = (myRole === cmd.target);
-                tagHtml = '<span class="cmd-tag" style="background: #fecaca; color: #dc2626;">All in</span>';
-                metaText = `${fromName}发起 · ${targetName}确认 · 掠夺${cmd.stealAmount || cmd.cost || 0}CP`;
-                tipHtml = `<span class="cmd-bank-tip">🔥 ${targetName}勾选确认后生效</span>`;
-            } else if (isBank) {
-                const lender = cmd.from;
-                const otherRole = lender === 'playerA' ? 'playerB' : 'playerA';
-                canCheck = (myRole === otherRole);
-                tagHtml = '<span class="cmd-tag bank">贷款</span>';
-                metaText = `${fromName}贷款 · ${targetName}完成 · ${cmd.cost || 0}CP`;
-                tipHtml = '<span class="cmd-bank-tip">💡 由' + (cmd.from === 'playerA' ? '程序员' : '律师') + '确认完成</span>';
+        function revealRolePwd(role) {
+            const valEl = document.getElementById(`pwd-val-${role}`);
+            const cloudPwd = currentDbState.game[role].pwd || "";
+            if (valEl.innerText === "******") {
+                valEl.innerText = cloudPwd === "" ? "【无密码】" : cloudPwd;
             } else {
-                canCheck = (myRole === cmd.target);
-                metaText = `${fromName}下达 · ${targetName}完成 · ${cmd.cost || 0}CP`;
+                valEl.innerText = "******";
             }
-            
-            return `
-                <li class="cmd-item">
-                    <input type="checkbox" class="cmd-checkbox" 
-                        ${canCheck ? '' : 'disabled'}
-                        onchange="checkFinishCmd(${i})">
-                    <div style="flex:1;">
-                        <div class="cmd-content">${cmd.cmdName || '(无内容)'}${tagHtml}</div>
-                        <span class="cmd-meta">${metaText}</span>
-                        ${tipHtml}
-                    </div>
-                </li>`;
-        }).join('');
-    } else {
-        list.innerHTML = '<li class="cmd-empty">暂无待执行命令</li>';
-    }
-
-    updateUndoBtn();
-}
-
-function checkFinishCmd(index) {
-    try {
-        ensureStateReady();
-        const cmd = gameState.commands[index];
-        if (!cmd) {
-            renderUI();
-            return showToast('命令不存在');
         }
-        
-        // 处理 All in 确认
-        if (cmd.isAllIn) {
-            if (myRole !== cmd.target) {
-                showToast('All in申请需由对方确认');
-                renderUI();
-                return;
+
+        function adminModifyRolePwd(role) {
+            const newPwd = prompt(`【管理员权限】请输入要强制修改 ${role === 'lawyer' ? '律师' : '程序员'} 的新操作密码：`);
+            if (newPwd === null) return;
+            
+            db.ref(`rooms/${currentRoom}/game/${role}/pwd`).set(newPwd).then(() => {
+                alert("该角色密码强制修改成功！");
+                const valEl = document.getElementById(`pwd-val-${role}`);
+                valEl.innerText = "******";
+                addLog(`⚙️ 管理员修改了 ${role === 'lawyer' ? '律师' : '程序员'} 的操作密码。`);
+            });
+        }
+
+        function adminResetRolePwd(role) {
+            if (confirm(`【管理员权限】你确定要重置并清除 ${role === 'lawyer' ? '律师' : '程序员'} 的操作密码吗？重置后，该角色密码锁将被打开且可重新设置。`)) {
+                db.ref(`rooms/${currentRoom}/game/${role}/pwd`).set("").then(() => {
+                    alert("密码重置成功！");
+                    const valEl = document.getElementById(`pwd-val-${role}`);
+                    valEl.innerText = "******";
+                    localPasswords[role] = "";
+                    localStorage.removeItem(`pwd_${role}_local`);
+                    addLog(`⚙️ 管理员强制清除并重置了 ${role === 'lawyer' ? '律师' : '程序员'} 的操作密码锁。`);
+                });
             }
-            
-            const applicantName = cmd.from === 'playerA' ? '律师' : '程序员';
-            const confirmerName = cmd.target === 'playerA' ? '律师' : '程序员';
-            
-            if (!confirm(`确认接受 ${applicantName} 的 All in 通吃？\n将被掠夺 ${cmd.stealAmount || cmd.cost || 0} CP，此操作不可撤销！`)) {
-                renderUI();
-                return;
-            }
-            
-            pushHistory();
-            
-            // 执行 All in 效果
-            const applicantKey = cmd.from;
-            const targetKey = cmd.target;
-            const steal = cmd.stealAmount || cmd.cost || 0;
-            
-            gameState[applicantKey].cp += steal;
-            gameState[targetKey].cp -= steal;
-            
-            // 移除命令
-            gameState.commands.splice(index, 1);
-            
-            addLog('battle', `【🔥 ALL IN 生效】${applicantName} All in通吃，掠夺 ${confirmerName} ${steal} CP`);
-            
-            saveAndRender();
-            showToast('All in已生效');
-            return;
         }
-        
-        const isBank = cmd.isBank;
-        let hasPermission = false;
-        let finisherName = '';
-        
-        if (isBank) {
-            const lender = cmd.from;
-            const otherRole = lender === 'playerA' ? 'playerB' : 'playerA';
-            hasPermission = (myRole === otherRole);
-            finisherName = lender === 'playerA' ? '律师' : '程序员';
-        } else {
-            hasPermission = (myRole === cmd.target);
-            finisherName = cmd.target === 'playerA' ? '律师' : '程序员';
-        }
-        
-        if (!hasPermission) {
-            if (isBank) {
-                showToast('贷款命令需由对方确认完成');
-            } else {
-                showToast('这条命令不是你需要完成的');
-            }
-            renderUI();
-            return;
-        }
-        
-        const confirmText = isBank 
-            ? `确认${finisherName}完成了这条贷款待办？`
-            : '确认已完成这条命令？';
-        
-        if (!confirm(confirmText)) {
-            renderUI();
-            return;
-        }
-        
-        pushHistory();
-        const finished = gameState.commands.splice(index, 1)[0];
-        
-        if (isBank) {
-            const confirmer = myRole === 'playerA' ? '律师' : '程序员';
-            addLog('sys', `【核销】✅ ${confirmer}确认 ${finisherName} 完成贷款待办：${finished.cmdName}`);
-        } else {
-            addLog('sys', `【核销】✅ ${finisherName}完成命令：${finished.cmdName}`);
-        }
-        
-        saveAndRender();
-        showToast('已确认完成');
-    } catch (e) {
-        console.error('checkFinishCmd error:', e);
-        showToast('操作失败，请刷新重试');
-        renderUI();
-    }
-}
 
-function openRolePwdSetting() {
-    const currentPwd = gameState.passwords[myRole];
-    const roleName = myRole === 'playerA' ? '律师' : '程序员';
-    
-    // 如果已经设置过密码，按钮已置灰，不应该能点击（双重保险）
-    if (currentPwd && unlockedRoles[myRole]) {
-        return showToast('密码已设置，不可修改');
-    }
-    
-    if (currentPwd && !unlockedRoles[myRole]) {
-        // 已设置密码但未解锁，先验证
-        pendingRoleSwitch = myRole;
-        document.getElementById('rolePwdTitle').innerText = '🔐 验证当前密码';
-        document.getElementById('rolePwdDesc').innerText = '请输入当前角色密码';
-        document.getElementById('rolePwdInput').value = '';
-        document.getElementById('rolePwdConfirmBtn').className = 'modal-confirm';
-        document.getElementById('rolePwdConfirmBtn').innerText = '验证';
-        document.getElementById('rolePwdModal').classList.add('show');
-        setTimeout(() => document.getElementById('rolePwdInput').focus(), 100);
-    } else {
-        // 没有密码，直接设置（一次性）
-        const newPwd = prompt('请设置' + roleName + '的角色密码（至少2位，设置后不可修改）：');
-        if (newPwd === null) return;
-        if (!newPwd.trim()) return showToast('密码不能为空');
-        if (newPwd.length < 2) return showToast('密码至少2位');
-        
-        gameState.passwords[myRole] = newPwd.trim();
-        unlockedRoles[myRole] = true;
-        addLog('sys', `🔐 ${roleName} 设置了角色密码`);
-        saveAndRender();
-        updateRoleLockStatus();
-        updateRolePwdBtnStatus();
-        showToast('✅ 密码设置成功');
-    }
-}
-
-// 更新密码设置按钮状态（已设置密码则置灰）
-function updateRolePwdBtnStatus() {
-    const btn = document.querySelector('.role-pwd-btn');
-    if (!btn) return;
-    
-    const currentPwd = gameState.passwords[myRole];
-    if (currentPwd) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-        btn.innerText = '🔒 已设置密码';
-    } else {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-        btn.innerText = '🔑 设置角色密码';
-    }
-}
-
-function changeRole() {
-    // 兼容旧调用
-}
-
-// ========== 打赌 ==========
-function openBetModal() {
-    if (!checkRolePermission()) return;
-    document.getElementById('betContent').value = '';
-    document.getElementById('betModal').classList.add('show');
-    setTimeout(() => document.getElementById('betContent').focus(), 100);
-}
-function closeBetModal() {
-    document.getElementById('betModal').classList.remove('show');
-}
-function confirmBet() {
-    try {
-        const content = document.getElementById('betContent').value.trim();
-        if (!content) return showToast('请输入打赌内容');
-        closeBetModal();
-        
-        ensureStateReady();
-        pushHistory();
-        
-        const name = gameState[myRole].role;
-        gameState[myRole].cp += 1;
-        addLog('battle', `【打赌】🏆 ${name} 赢下对局：「${content}」，获得 1 CP`);
-        switchTurn();
-        
-        saveAndRender();
-        showToast('+1CP');
-    } catch (e) {
-        console.error('confirmBet error:', e);
-        showToast('操作失败，请刷新重试');
-    }
-}
-document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && document.getElementById('betModal').classList.contains('show')) confirmBet();
-});
-
-// ========== All in ==========
-function allIn() {
-    try {
-        if (!checkRolePermission()) return;
-        
-        ensureStateReady();
-        
-        const enemyKey = myRole === 'playerA' ? 'playerB' : 'playerA';
-        const myCp = gameState[myRole].cp;
-        if (myCp <= 0) {
-            showToast('你没有CP，无法All in');
-            return;
-        }
-        const steal = Math.min(myCp, Math.max(0, gameState[enemyKey].cp));
-        if (steal <= 0) {
-            showToast('对方没有CP可掠夺');
-            return;
-        }
-        
-        // 检查是否已有待确认的all in
-        const existingAllIn = gameState.commands.find(cmd => cmd.isAllIn && cmd.from === myRole);
-        if (existingAllIn) {
-            showToast('你已有待确认的All in申请');
-            return;
-        }
-        
-        if (!confirm('确定发起 All in？需要对方确认后才生效，将掠夺对方 ' + steal + ' CP！')) return;
-        
-        pushHistory();
-        
-        // 生成一条all in待确认命令
-        if (!Array.isArray(gameState.commands)) {
-            gameState.commands = [];
-        }
-        
-        const myName = gameState[myRole].role;
-        const enemyName = enemyKey === 'playerA' ? '律师' : '程序员';
-        
-        gameState.commands.push({
-            from: myRole,
-            target: enemyKey,
-            cmdName: `All in 通吃申请（掠夺 ${steal} CP）`,
-            cost: steal,
-            isAllIn: true,
-            myCpBefore: myCp,
-            stealAmount: steal
-        });
-        
-        addLog('battle', `【🔥 ALL IN 申请】${myName} 发起 All in 通吃，等待${enemyName}确认...`);
-        switchTurn();
-        
-        saveAndRender();
-        showToast('All in申请已发出，等待对方确认');
-    } catch (e) {
-        console.error('allIn error:', e);
-        showToast('操作失败，请刷新重试');
-    }
-}
-
-// ========== 银行系统 ==========
-function openBankModal() {
-    if (!checkRolePermission()) return;
-    selectedBankCost = 0;
-    document.querySelectorAll('#bankModal .cmd-btns .btn').forEach(b => b.classList.remove('selected'));
-    document.getElementById('bankCmdContent').value = '';
-    document.getElementById('bankModal').classList.add('show');
-    setTimeout(() => document.getElementById('bankCmdContent').focus(), 100);
-}
-
-function closeBankModal() {
-    document.getElementById('bankModal').classList.remove('show');
-}
-
-function confirmBankLoan() {
-    try {
-        if (selectedBankCost === 0) return showToast('请先选择贷款等级');
-        const text = document.getElementById('bankCmdContent').value.trim();
-        if (!text) return showToast('请输入待办内容');
-        
-        ensureStateReady();
-        pushHistory();
-        
-        gameState[myRole].cp += selectedBankCost;
-        
-        if (!Array.isArray(gameState.commands)) {
-            gameState.commands = [];
-        }
-        
-        gameState.commands.push({
-            from: myRole,
-            target: myRole,
-            cmdName: text,
-            cost: selectedBankCost,
-            isBank: true
-        });
-        
-        const name = gameState[myRole].role;
-        const otherName = myRole === 'playerA' ? '程序员' : '律师';
-        addLog('bank', `【银行】🏦 ${name} 贷款 ${selectedBankCost} CP，待办：${text}（由${otherName}确认完成）`);
-        switchTurn();
-        
-        document.getElementById('bankCmdContent').value = '';
-        selectedBankCost = 0;
-        document.querySelectorAll('#bankModal .cmd-btns .btn').forEach(b => b.classList.remove('selected'));
-        
-        closeBankModal();
-        saveAndRender();
-        showToast('贷款成功，+' + selectedBankCost + 'CP');
-    } catch (e) {
-        console.error('confirmBankLoan error:', e);
-        showToast('操作失败，请刷新重试');
-    }
-}
-
-// ========== 下达命令 ==========
-function issueCommand() {
-    try {
-        if (!checkRolePermission()) return;
-        if (selectedCost === 0) return showToast('请先选择命令等级');
-        const text = document.getElementById('cmdContent').value.trim();
-        if (!text) return showToast('请输入命令内容');
-        
-        ensureStateReady();
-        
-        if (gameState[myRole].cp < selectedCost) {
-            showToast('CP不足，可以试试银行贷款');
-            return;
-        }
-        
-        pushHistory();
-        
-        const target = myRole === 'playerA' ? 'playerB' : 'playerA';
-        gameState[myRole].cp -= selectedCost;
-        
-        if (!Array.isArray(gameState.commands)) {
-            gameState.commands = [];
-        }
-        gameState.commands.push({
-            from: myRole,
-            target: target,
-            cmdName: text,
-            cost: selectedCost,
-            isBank: false
-        });
-        
-        const name = gameState[myRole].role;
-        addLog('battle', `【命令】⚡ ${name} 消耗 ${selectedCost} CP：${text}`);
-        switchTurn();
-        
-        document.getElementById('cmdContent').value = '';
-        selectedCost = 0;
-        document.querySelectorAll('.cmd-btns .btn').forEach(b => b.classList.remove('selected'));
-        
-        saveAndRender();
-        showToast('命令已下达');
-    } catch (e) {
-        console.error('issueCommand error:', e);
-        showToast('下达失败，请刷新重试');
-        ensureStateReady();
-        renderUI();
-    }
-}
-
-// ========== 技能 ==========
-function useSkill(roleKey) {
-    try {
-        if (!checkRolePermission()) return;
-        if (myRole !== roleKey) return showToast('不能使用对方的技能');
-        
-        ensureStateReady();
-        
-        const cdInfo = getSkillCooldownInfo(roleKey);
-        if (!cdInfo.ready) {
-            showToast('技能冷却中，' + formatTime(cdInfo.remaining));
-            return;
-        }
-        
-        if (gameState[roleKey].skillUsed) return showToast('本局技能已使用过了');
-        
-        pushHistory();
-        const enemyKey = roleKey === 'playerA' ? 'playerB' : 'playerA';
-        
-        if (roleKey === 'playerA') {
-            const cmds = gameState.commands || [];
-            let idx = -1;
-            for (let i = cmds.length - 1; i >= 0; i--) {
-                if (cmds[i] && cmds[i].from === 'playerB') { 
-                    idx = i; 
-                    break; 
-                }
-            }
-            if (idx === -1) {
-                showToast('对方还没有下达过命令');
-                historyStack.pop();
-                return;
-            }
-            
-            const cmd = cmds.splice(idx, 1)[0];
-            gameState.playerB.cp += (cmd.cost || 0);
-            gameState.playerA.skillUsed = true;
-            gameState.playerA.skillUsedAt = Date.now();
-            addLog('skill', `【技能】👨‍⚖️ 律师函警告：撤销「${cmd.cmdName}」，返还 ${cmd.cost || 0} CP`);
-        }
-        
-        if (roleKey === 'playerB') {
-            const enemyCp = Math.max(0, gameState[enemyKey].cp);
-            if (enemyCp <= 0) {
-                showToast('对方没有CP，无法使用致命Bug');
-                historyStack.pop();
-                return;
-            }
-            let cut = Math.floor(enemyCp * 0.3);
-            if (cut <= 0) cut = 1;
-            gameState[enemyKey].cp -= cut;
-            gameState.playerB.skillUsed = true;
-            gameState.playerB.skillUsedAt = Date.now();
-            addLog('skill', `【技能】👨‍💻 致命 Bug：扣除对方 ${cut} CP`);
-        }
-        
-        switchTurn();
-        saveAndRender();
-        showToast('技能已发动');
-    } catch (e) {
-        console.error('useSkill error:', e);
-        showToast('技能发动失败，请刷新重试');
-        ensureStateReady();
-        renderUI();
-    }
-}
-
-// ========== Toast ==========
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.innerText = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2000);
-}
-
-// ========== 初始化 ==========
-function init() {
-    gameState = getDefaultState();
-    renderUI();
-    
-    const urlRoom = getRoomFromUrl();
-    
-    if (urlRoom) {
-        joinRoomById(urlRoom, false);
-    } else {
-        const newId = genRoomId();
-        joinRoomById(newId, true);
-    }
-    
-    // 修复连接问题：监听 Firebase 真实连接状态
-    try {
-        const connectedRef = database.ref('.info/connected');
-        connectedRef.on('value', snap => {
-            if (snap.val() === true) {
-                document.getElementById('syncStatus').innerText = '已连接';
-                document.getElementById('syncDot').classList.remove('offline');
-            } else {
-                document.getElementById('syncStatus').innerText = '连接中...';
-                document.getElementById('syncDot').classList.add('offline');
-            }
-        });
-    } catch(e) { console.warn('连接监听失败', e); }
-    
-    startCooldownTimer();
-}
-
-if (typeof firebase !== 'undefined') {
-    init();
-} else {
-    window.addEventListener('load', init);
-}
-</script>
+        window.onload = function() {
+            initRoom();
+        };
+    </script>
 </body>
 </html>
