@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+/* ==========================================================================
+   全局滚动条美化
+   ========================================================================== */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+}
+
+/* ==========================================================================
+   交互微反馈
+   ========================================================================== */
+button:active {
+    transform: scale(0.97);
+}
+
+/* ==========================================================================
+   角色卡片选中高亮样式 (替代原巨型水印方案)
+   ========================================================================== */
+.active-lawyer-border {
+    border-color: #2563eb !important;
+    box-shadow: 0 4px 15px -3px rgba(37, 99, 235, 0.1),
+                0 4px 6px -4px rgba(37, 99, 235, 0.1) !important;
+}
+
+.active-coder-border {
+    border-color: #059669 !important;
+    box-shadow: 0 4px 15px -3px rgba(5, 150, 105, 0.1),
+                0 4px 6px -4px rgba(5, 150, 105, 0.1) !important;
+}
+
+/* ==========================================================================
+   全局过渡动画
+   ========================================================================== */
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+}
+
+/* 模态框淡入 */
+.hidden {
+    display: none !important;
+}

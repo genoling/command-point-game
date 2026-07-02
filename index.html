@@ -4,48 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>博弈论：律政与代码 | 实时同步 V3.5.3</title>
-    <!-- 引入 Tailwind CSS 提升 UI 渲染效率 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 字体图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Firebase App 与 Database 核心 SDK -->
+    <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap');
-        body {
-            font-family: 'Noto Sans SC', 'Fira Code', sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 2px;
-        }
-    </style>
 </head>
-<body class="min-h-screen pb-12">
-    <!-- 顶部状态栏 -->
+<body class="min-h-screen pb-12 bg-slate-50 text-slate-800">
+    
+    <!-- 顶部状态导航栏 -->
     <header class="bg-white border-b border-slate-200 sticky top-0 z-40 backdrop-blur-md bg-opacity-95 px-4 py-3 shadow-sm">
         <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center space-x-2">
                 <span class="text-xl">⚔️</span>
                 <div>
                     <h1 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                        博弈论：律政与代码 
+                        博弈论：律政与代码
                         <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-200">V3.5.3</span>
                     </h1>
                     <p class="text-[10px] text-slate-500">双人实时对战 · Firebase 同步</p>
                 </div>
             </div>
-            
             <div class="flex items-center gap-1.5 text-xs">
                 <span id="conn-status" class="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-1 rounded border border-amber-200">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
@@ -57,10 +36,10 @@
                 <button onclick="openRoomModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="换房间">
                     <i class="fa-solid fa-house"></i>
                 </button>
-                <button onclick="openExportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="导出">
+                <button onclick="openExportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="导出数据">
                     <i class="fa-solid fa-download"></i>
                 </button>
-                <button onclick="openImportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="导入">
+                <button onclick="openImportModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-1.5 rounded border border-slate-200 transition" title="导入数据">
                     <i class="fa-solid fa-upload"></i>
                 </button>
             </div>
@@ -68,11 +47,11 @@
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-4 space-y-4">
-        <!-- 实时同步提示条 -->
+        <!-- 核心状态与引导提示 -->
         <div class="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between text-xs text-slate-500 shadow-sm">
             <span class="flex items-center gap-1.5">
                 <i class="fa-solid fa-circle-info text-blue-500"></i>
-                <span>实时同步：对方操作自动刷新 | 导出数据可用于版本升级迁移</span>
+                <span>实时同步：对方操作自动同步更新 | 支持跨端和断网重连保护</span>
             </span>
             <button onclick="toggleRules()" class="text-indigo-600 hover:text-indigo-500 flex items-center gap-1 font-medium">
                 <span id="rule-btn-txt">📖 游戏规则</span>
@@ -80,40 +59,33 @@
             </button>
         </div>
 
-        <!-- 规则面板（折叠） -->
+        <!-- 游戏规则折叠面板 -->
         <section id="rules-panel" class="hidden bg-white border border-slate-200 rounded-xl p-4 text-xs space-y-4 text-slate-600 shadow-sm">
             <div class="flex items-center justify-between border-b border-slate-100 pb-2">
                 <h3 class="font-bold text-slate-800 flex items-center gap-1.5">
                     <i class="fa-solid fa-book-open text-indigo-500"></i> 规则指南
                 </h3>
-                <span class="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">V3.5.3</span>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <span class="text-indigo-500">一、</span> 基础设定
-                    </h4>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1"><span class="text-indigo-500">一、</span> 基础设定</h4>
                     <ul class="list-disc pl-4 space-y-1 text-slate-500">
-                        <li>双角色：律师 / 程序员，<strong>CP 即 Command Point（命令点数）</strong>；打赌获胜获得 1 CP。</li>
-                        <li>命令分级：1级(-1 CP)、2级(-2 CP)、3级(-4 CP)，选等级+输内容+点下达。</li>
-                        <li>All in：消耗自身全部 CP，对方需确认后，掠夺对方同等数量 CP。</li>
+                        <li>双角色：律师 / 程序员，<strong>CP 即 Command Point（命令点数）</strong>。</li>
+                        <li>命令分级：1级(-1 CP)、2级(-2 CP)、3级(-4 CP)，扣减对应点数。</li>
+                        <li>All In：消耗自身全部 CP，对方确认后，直接夺取其等额 CP。</li>
                         <li>🏦 银行系统：可贷款获得 CP，但生成一条自己要完成的待办，由对方确认完成。</li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <span class="text-emerald-500">二、</span> 专属技能（24h冷却）
-                    </h4>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1"><span class="text-emerald-500">二、</span> 专属技能 (24h 冷却)</h4>
                     <ul class="list-disc pl-4 space-y-1 text-slate-500">
-                        <li>👨‍⚖️ 律师【律师函警告】：撤销对方最后1条命令，全额返还 CP。</li>
-                        <li>👨‍💻 程序员【致命Bug】：扣除对方当前30% CP，最少扣1点。</li>
-                        <li>⏱️ 技能使用后进入24小时冷却，进度条实时显示剩余时间。</li>
+                        <li>👨‍⚖️ 律师【律师函警告】：撤销对方最新命令，全额退还 CP。</li>
+                        <li>👨‍💻 程序员【致命Bug】：强制剥夺对方当前 30% CP (最少 1 CP)。</li>
+                        <li>⏱️ 技能使用后进入 24 小时冷却，进度条实时显示剩余时间。</li>
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <span class="text-amber-500">三、</span> 命令执行
-                    </h4>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1"><span class="text-amber-500">三、</span> 命令执行</h4>
                     <ul class="list-disc pl-4 space-y-1 text-slate-500">
                         <li>普通命令：下达者发给对方，对方勾选完成；</li>
                         <li>贷款命令：谁贷款谁完成，由对方勾选确认你完成了；</li>
@@ -121,36 +93,21 @@
                     </ul>
                 </div>
                 <div>
-                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1">
-                        <span class="text-rose-500">四、</span> 安全与管理员
-                    </h4>
+                    <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-1"><span class="text-rose-500">四、</span> 安全与管理员</h4>
                     <ul class="list-disc pl-4 space-y-1 text-slate-500">
                         <li>🔐 角色密码：独立设置密码，防止对方操纵你的号（一次生效后置灰）。</li>
                         <li>🔒 管理员密码：初始内置，可自行修改，用于重置和房间管理。</li>
                     </ul>
                 </div>
             </div>
-            
-            <!-- 更新记录 -->
-            <div class="border-t border-slate-100 pt-3">
-                <h4 class="font-bold text-slate-700 mb-1 text-[11px]">版本更新记录</h4>
-                <div class="space-y-1 text-[11px] text-slate-500 max-h-24 overflow-y-auto custom-scrollbar">
-                    <p><strong class="text-slate-700">V3.5.3：</strong> 规则中补充 CP = Command Point 解析；主面板中恢复精简 CP 简称；全面隐藏默认管理口令文字提示，防止泄露。</p>
-                    <p><strong class="text-slate-700">V3.5.2：</strong> 视觉大改版！重构为明亮淡雅风格。</p>
-                    <p><strong class="text-slate-700">V3.5.1：</strong> 修复贷款提示CP数错误Bug；重构房间管理与批量操作UI，压缩空间更显紧凑清晰。</p>
-                    <p><strong class="text-slate-700">V3.5：</strong> 删掉首次切换角色强制密码；密码改为一次性使用，生效后置灰。</p>
-                    <p><strong class="text-slate-700">V3.3：</strong> 新增角色密码管理；修复房间批量删除逻辑。</p>
-                    <p><strong class="text-slate-700">V3.2：</strong> 新增房间列表管理与整局重置。</p>
-                </div>
-            </div>
         </section>
 
-        <!-- 当前状态 & 撤销 -->
+        <!-- 回合与全局撤销状态 -->
         <div class="bg-white border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs shadow-sm">
             <div class="flex items-center gap-2">
                 <span class="text-slate-500">当前回合：</span>
-                <span id="turn-badge" class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-bold border border-indigo-100">律师</span>
-                <span id="game-status-text" class="text-emerald-600 font-medium">🎉 新一局游戏开始！</span>
+                <span id="turn-badge" class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-bold border border-indigo-100">加载中</span>
+                <span id="game-status-text" class="text-emerald-600 font-medium">同步引擎已建立连接</span>
             </div>
             <button id="undo-btn" onclick="triggerUndo()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded border border-slate-200 flex items-center gap-1 transition">
                 <i class="fa-solid fa-rotate-left text-[10px]"></i>
@@ -171,11 +128,11 @@
             </div>
         </section>
 
-        <!-- 角色面板 -->
+        <!-- 非对称角色卡片布局 -->
         <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- 律师 👨‍⚖️ -->
+            
+            <!-- 律师卡片 -->
             <div id="role-box-lawyer" class="bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm">
-                <div class="absolute -right-6 -bottom-6 text-slate-100 text-8xl font-black pointer-events-none">LAW</div>
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center gap-2">
                         <div class="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-xl">👨‍⚖️</div>
@@ -190,39 +147,30 @@
                         选择我是律师
                     </button>
                 </div>
-
                 <div class="bg-slate-50 rounded-xl p-3 text-center my-3 border border-slate-100">
                     <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">CP 点数</div>
                     <div class="text-3xl font-extrabold text-blue-600 my-1" id="cp-lawyer">0</div>
                 </div>
-
-                <!-- 技能 -->
                 <div class="bg-slate-50/60 rounded-xl p-3 border border-slate-100">
                     <div class="flex justify-between items-center text-xs mb-1.5">
-                        <span class="font-bold text-blue-600 flex items-center gap-1">
-                            🛡️ 律师函警告 <span class="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.2 rounded border border-blue-100">24h</span>
-                        </span>
-                        <button onclick="useLawyerSkill()" id="skill-lawyer-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition">
-                            发动
-                        </button>
+                        <span class="font-bold text-blue-600 flex items-center gap-1">🛡️ 律师函警告</span>
+                        <button onclick="useLawyerSkill()" id="skill-lawyer-btn" class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition">发动</button>
                     </div>
-                    <p class="text-[10.5px] text-slate-500">撤销对方最后下达的 1 条命令，全额退还其消耗的 CP。</p>
-                    <!-- 冷却进度 -->
+                    <p class="text-[10.5px] text-slate-500">撤销对方最后下达的一条待办命令，并全额退还其消耗的 CP。</p>
                     <div class="mt-2.5 hidden" id="cooldown-container-lawyer">
                         <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
                             <span>冷却中...</span>
                             <span id="cooldown-time-lawyer">--:--:--</span>
                         </div>
                         <div class="w-full bg-slate-200 rounded-full h-1">
-                            <div id="cooldown-bar-lawyer" class="bg-blue-500 h-1 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            <div id="cooldown-bar-lawyer" class="bg-blue-500 h-1 rounded-full transition-all" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 程序员 👨‍💻 -->
+            <!-- 程序员卡片 -->
             <div id="role-box-coder" class="bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm">
-                <div class="absolute -right-6 -bottom-6 text-slate-100 text-8xl font-black pointer-events-none">CODE</div>
                 <div class="flex justify-between items-start mb-3">
                     <div class="flex items-center gap-2">
                         <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-xl">👨‍💻</div>
@@ -237,97 +185,73 @@
                         选择我是程序员
                     </button>
                 </div>
-
                 <div class="bg-slate-50 rounded-xl p-3 text-center my-3 border border-slate-100">
                     <div class="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">CP 点数</div>
                     <div class="text-3xl font-extrabold text-emerald-600 my-1" id="cp-coder">0</div>
                 </div>
-
-                <!-- 技能 -->
                 <div class="bg-slate-50/60 rounded-xl p-3 border border-slate-100">
                     <div class="flex justify-between items-center text-xs mb-1.5">
-                        <span class="font-bold text-emerald-400 flex items-center gap-1">
-                            ⚡ 致命 Bug <span class="text-[10px] bg-emerald-50 text-emerald-600 px-1.5 py-0.2 rounded border border-emerald-100">24h</span>
-                        </span>
-                        <button onclick="useCoderSkill()" id="skill-coder-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition">
-                            发动
-                        </button>
+                        <span class="font-bold text-emerald-600 flex items-center gap-1">⚡ 致命 Bug</span>
+                        <button onclick="useCoderSkill()" id="skill-coder-btn" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition">发动</button>
                     </div>
-                    <p class="text-[10.5px] text-slate-500">扣除对方当前 30% 的 CP 点数（按四舍五入计算，最少扣 1 点）。</p>
-                    <!-- 冷却进度 -->
+                    <p class="text-[10.5px] text-slate-500">强行扣除对方当前 30% CP，向上四舍五入，最少扣除 1 CP。</p>
                     <div class="mt-2.5 hidden" id="cooldown-container-coder">
                         <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
                             <span>冷却中...</span>
                             <span id="cooldown-time-coder">--:--:--</span>
                         </div>
                         <div class="w-full bg-slate-200 rounded-full h-1">
-                            <div id="cooldown-bar-coder" class="bg-emerald-500 h-1 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            <div id="cooldown-bar-coder" class="bg-emerald-500 h-1 rounded-full transition-all" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 基础操作板块 -->
+        <!-- 基础物理操作面板 -->
         <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
             <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
                 <i class="fa-solid fa-sliders text-indigo-500"></i>
                 <span>🎯 基础操作</span>
             </h3>
-            
             <div class="grid grid-cols-3 gap-2 mb-4">
-                <button onclick="openBetModal()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-slate-200 transition flex flex-col items-center justify-center gap-1 shadow-sm">
-                    <span class="text-lg">🏆</span>
-                    <span>赢打赌 (+1 CP)</span>
+                <button onclick="openBetModal()" class="bg-slate-50 hover:bg-slate-100 text-slate-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-slate-200 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-lg">🏆</span><span>赢打赌 (+1 CP)</span>
                 </button>
-                <button onclick="triggerAllIn()" class="bg-rose-50 hover:bg-rose-100/60 text-rose-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-rose-200 transition flex flex-col items-center justify-center gap-1 shadow-sm">
-                    <span class="text-lg">🔥</span>
-                    <span>All in 通吃</span>
+                <button onclick="triggerAllIn()" class="bg-rose-50 hover:bg-rose-100/60 text-rose-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-rose-200 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-lg">🔥</span><span>All in 通吃</span>
                 </button>
-                <button onclick="openLoanModal()" class="bg-indigo-50 hover:bg-indigo-100/60 text-indigo-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-indigo-200 transition flex flex-col items-center justify-center gap-1 shadow-sm">
-                    <span class="text-lg">🏦</span>
-                    <span>银行贷款</span>
+                <button onclick="openLoanModal()" class="bg-indigo-50 hover:bg-indigo-100/60 text-indigo-700 py-2.5 px-2 rounded-xl text-xs font-bold border border-indigo-200 transition flex flex-col items-center justify-center gap-1">
+                    <span class="text-lg">🏦</span><span>银行贷款</span>
                 </button>
             </div>
-
-            <!-- 下达命令 -->
+            
             <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
                 <h4 class="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1">
                     <i class="fa-solid fa-paper-plane text-indigo-500"></i> 下达命令
                 </h4>
                 <div class="flex flex-wrap gap-2 mb-2">
                     <label class="flex-1 min-w-[70px] bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:border-slate-300 transition shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] text-slate-700 font-bold">1级 ⚡</span>
-                            <span class="text-[9px] text-slate-400">消耗 1 CP</span>
-                        </div>
+                        <div class="flex flex-col"><span class="text-[10px] text-slate-700 font-bold">1级 ⚡</span><span class="text-[9px] text-slate-400">消耗 1 CP</span></div>
                         <input type="radio" name="cmd-lv" value="1" checked class="accent-indigo-600">
                     </label>
                     <label class="flex-1 min-w-[70px] bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:border-slate-300 transition shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] text-slate-700 font-bold">2级 ⚡⚡</span>
-                            <span class="text-[9px] text-slate-400">消耗 2 CP</span>
-                        </div>
+                        <div class="flex flex-col"><span class="text-[10px] text-slate-700 font-bold">2级 ⚡⚡</span><span class="text-[9px] text-slate-400">消耗 2 CP</span></div>
                         <input type="radio" name="cmd-lv" value="2" class="accent-indigo-600">
                     </label>
                     <label class="flex-1 min-w-[70px] bg-white border border-slate-200 rounded-lg p-2 flex items-center justify-between cursor-pointer hover:border-slate-300 transition shadow-sm">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] text-slate-700 font-bold">3级 ⚡⚡⚡</span>
-                            <span class="text-[9px] text-slate-400">消耗 4 CP</span>
-                        </div>
+                        <div class="flex flex-col"><span class="text-[10px] text-slate-700 font-bold">3级 ⚡⚡⚡</span><span class="text-[9px] text-slate-400">消耗 4 CP</span></div>
                         <input type="radio" name="cmd-lv" value="3" class="accent-indigo-600">
                     </label>
                 </div>
                 <div class="flex gap-2">
-                    <input type="text" id="cmd-text" placeholder="输入你需要惩罚或指示对方做的事情..." class="flex-1 bg-white text-xs border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-sm">
-                    <button onclick="dispatchCommand()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition shrink-0">
-                        下达
-                    </button>
+                    <input type="text" id="cmd-text" placeholder="输入你需要指示对方线下执行的内容..." class="flex-1 bg-white text-xs border border-slate-200 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:border-indigo-500 shadow-sm">
+                    <button onclick="dispatchCommand()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-sm transition shrink-0">下达</button>
                 </div>
             </div>
         </section>
 
-        <!-- 历史事件日志 -->
+        <!-- 战斗日志面板 -->
         <section class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
             <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-1.5">
                 <i class="fa-solid fa-clock-rotate-left text-slate-500"></i>
@@ -338,1418 +262,241 @@
             </div>
         </section>
 
-        <!-- 管理区入口 -->
         <div class="flex justify-center">
             <button onclick="reqAdminAccess()" class="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition">
-                <i class="fa-solid fa-gears"></i>
-                <span>管理设置</span>
+                <i class="fa-solid fa-gears"></i><span>管理设置</span>
             </button>
         </div>
     </main>
 
-    <!-- ==================== 模态弹窗系统 ==================== -->
-
-    <!-- 1. 打赌弹窗 -->
+    <!-- 弹窗：打赌 -->
     <div id="bet-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">🏆</span>
-                <h4 class="font-bold text-slate-800 text-sm">赢打赌</h4>
-            </div>
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">🏆 赢打赌</h4>
             <div>
-                <label class="block text-[11px] text-slate-500 mb-1.5">输入本次打赌的具体内容：</label>
-                <input type="text" id="bet-text" placeholder="例如：打赌今晚九点不下雨..." class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+                <label class="block text-slate-500 mb-1.5">本次打赌的具体约定内容：</label>
+                <input type="text" id="bet-text" placeholder="例如：打赌今晚十点前不下雨" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
             </div>
-            <div class="flex justify-end gap-2 text-xs pt-1">
+            <div class="flex justify-end gap-2 pt-1">
                 <button onclick="closeModal('bet-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
-                <button onclick="submitBet()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认 +1 CP</button>
+                <button onclick="submitBet()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认并增加 1 CP</button>
             </div>
         </div>
     </div>
 
-    <!-- 2. 贷款弹窗 -->
+    <!-- 弹窗：贷款 -->
     <div id="loan-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">🏦</span>
-                <h4 class="font-bold text-slate-800 text-sm">银行贷款</h4>
-            </div>
-            <p class="text-[11px] text-slate-500 leading-relaxed bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
-                💡 向银行贷款获得CP，但你必须当即生成一条<strong>由自己完成</strong>的待办命令作为抵押。对方需要确认你真的完成后，它才会自动移除。
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">🏦 银行贷款</h4>
+            <p class="text-slate-500 leading-relaxed bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
+                💡 向银行贷款可获得 CP，但必须生成一条<strong>由自己（贷款方）完成</strong>的抵押待办。对方确认你已在现实中完成后，才会自动移除。
             </p>
             <div>
-                <label class="block text-[11px] text-slate-500 mb-1.5">选择贷款等级（借多少CP）：</label>
+                <label class="block text-slate-500 mb-1.5">选择贷款等级（CP 数额）：</label>
                 <div class="grid grid-cols-3 gap-2">
                     <label class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition">
-                        <span class="text-[10px] text-indigo-600 font-bold">1级</span>
-                        <span class="text-[9px] text-slate-400">贷 1 CP</span>
+                        <span class="text-indigo-600 font-bold">1级</span><span class="text-[9px] text-slate-400">贷 1 CP</span>
                         <input type="radio" name="loan-lv" value="1" checked class="mt-1.5 accent-indigo-600">
                     </label>
                     <label class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition">
-                        <span class="text-[10px] text-indigo-600 font-bold">2级</span>
-                        <span class="text-[9px] text-slate-400">贷 2 CP</span>
+                        <span class="text-indigo-600 font-bold">2级</span><span class="text-[9px] text-slate-400">贷 2 CP</span>
                         <input type="radio" name="loan-lv" value="2" class="mt-1.5 accent-indigo-600">
                     </label>
                     <label class="bg-slate-50 border border-slate-200 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition">
-                        <span class="text-[10px] text-indigo-600 font-bold">3级</span>
-                        <span class="text-[9px] text-slate-400">贷 4 CP</span>
+                        <span class="text-indigo-600 font-bold">3级</span><span class="text-[9px] text-slate-400">贷 4 CP</span>
                         <input type="radio" name="loan-lv" value="3" class="mt-1.5 accent-indigo-600">
                     </label>
                 </div>
             </div>
             <div>
-                <label class="block text-[11px] text-slate-500 mb-1.5">输入你（贷款方）承诺要完成的指令：</label>
-                <input type="text" id="loan-text" placeholder="例如：明天洗碗、跑两公里..." class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+                <label class="block text-slate-500 mb-1.5">你承诺要完成的惩罚抵押内容：</label>
+                <input type="text" id="loan-text" placeholder="例如：手洗对方袜子一双" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
             </div>
-            <div class="flex justify-end gap-2 text-xs pt-1">
+            <div class="flex justify-end gap-2 pt-1">
                 <button onclick="closeModal('loan-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
                 <button onclick="submitLoan()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认贷款</button>
             </div>
         </div>
     </div>
 
-    <!-- 3. 管理设置验证 & 管理后台 -->
-    <div id="admin-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <!-- 密码验证层 -->
-        <div id="admin-auth" class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">⚙️</span>
-                <h4 class="font-bold text-slate-800 text-sm">管理设置</h4>
-            </div>
+    <!-- 弹窗：管理设置安全登录 -->
+    <div id="admin-auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">⚙️ 安全验证</h4>
             <div>
-                <label class="block text-[11px] text-slate-500 mb-1.5">请输入安全管理密码进入设置：</label>
-                <input type="password" id="admin-pwd-input" placeholder="请输入管理员密码" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+                <label class="block text-slate-500 mb-1.5">请输入安全管理密码进入设置：</label>
+                <input type="password" id="admin-pwd-input" placeholder="请输入管理员密码" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:border-indigo-500">
             </div>
-            <div class="flex justify-end gap-2 text-xs pt-1">
-                <button onclick="closeModal('admin-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
-                <button onclick="verifyAdmin()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">验证进入</button>
+            <div class="flex justify-end gap-2 pt-1">
+                <button onclick="closeModal('admin-auth-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitAdminAuth()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">验证</button>
             </div>
         </div>
+    </div>
 
-        <!-- 真实面板 -->
-        <div id="admin-content" class="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-4 space-y-4 shadow-xl hidden">
+    <!-- 弹窗：管理控制中心 -->
+    <div id="admin-panel-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-xl text-xs max-h-[85vh] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-shield-halved text-indigo-500"></i> 管理控制中心
-                </h4>
-                <button onclick="closeModal('admin-modal')" class="text-slate-400 hover:text-slate-600">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <h4 class="font-bold text-slate-800 text-sm">🛠️ 游戏后台控制面板</h4>
+                <button onclick="closeModal('admin-panel-modal')" class="text-slate-400 hover:text-slate-600 text-base"><i class="fa-solid fa-xmark"></i></button>
             </div>
-
-            <!-- 1. 房间管理区 -->
-            <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
-                <div class="flex justify-between items-center mb-1.5">
-                    <span class="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                        <i class="fa-solid fa-network-wired text-[10px] text-indigo-500"></i> 🏠 房间列表
-                    </span>
-                    <div class="flex items-center gap-1 text-[10px]">
-                        <button onclick="refreshRoomList()" class="bg-white text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 hover:bg-slate-100 transition shadow-sm" title="刷新列表">
-                            <i class="fa-solid fa-rotate-right"></i>
-                        </button>
-                        <button onclick="toggleAllRooms(this)" class="bg-white text-slate-600 px-1.5 py-0.5 rounded border border-slate-200 hover:bg-slate-100 transition text-[9px] shadow-sm">
-                            全选
-                        </button>
-                        <button onclick="bulkDeleteRooms()" class="bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200 hover:bg-rose-100 transition text-[9px] font-semibold">
-                            <i class="fa-solid fa-trash-can"></i> 批量删除
-                        </button>
-                    </div>
+            
+            <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-700">🏠 房间列表</span>
+                    <button onclick="deleteSelectedRooms()" class="bg-red-50 text-red-600 border border-red-200 px-2.5 py-1 rounded hover:bg-red-100 transition">批量删除</button>
                 </div>
-
-                <!-- 紧凑表格容器 -->
-                <div class="max-h-24 overflow-y-auto custom-scrollbar border border-slate-200 rounded bg-white">
-                    <table class="w-full text-left border-collapse text-[10px]">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                <th class="py-1 px-1.5 text-center w-6">选</th>
-                                <th class="py-1 px-1.5">房间名</th>
-                                <th class="py-1 px-1.5 text-right w-20">操作</th>
+                <div class="border border-slate-200 rounded-lg overflow-hidden max-h-32 overflow-y-auto custom-scrollbar">
+                    <table class="w-full text-[11px] text-left">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-500">
+                            <tr>
+                                <th class="p-2 text-center w-8"><input type="checkbox" id="room-select-all" onclick="toggleSelectAllRooms(this)"></th>
+                                <th class="p-2">房间号</th>
+                                <th class="p-2 text-right">活跃状态</th>
                             </tr>
                         </thead>
-                        <tbody id="rooms-tbody" class="divide-y divide-slate-100">
-                            <tr>
-                                <td colspan="3" class="text-center py-2 text-slate-400 text-[10px]">加载中...</td>
-                            </tr>
+                        <tbody id="admin-room-list">
+                            <!-- JS 动态填充 -->
                         </tbody>
                     </table>
                 </div>
+                <button onclick="createNewRoom()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded border border-slate-200">新建房间</button>
+            </div>
 
-                <!-- 新建房间 -->
-                <div class="flex gap-1.5 mt-2">
-                    <input type="text" id="new-room-input" placeholder="输入新房间号..." class="flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-[10px] focus:outline-none focus:border-indigo-500 text-slate-800 shadow-sm">
-                    <button onclick="createNewRoom()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1 rounded text-[10px] shadow-sm transition shrink-0">
-                        <i class="fa-solid fa-plus"></i> 新建房间
-                    </button>
+            <div class="border-t border-slate-100 pt-3 space-y-2">
+                <span class="font-bold text-slate-700 block">📌 当前房间操作</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="resetCurrentRoomData()" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 py-2 rounded font-semibold">🔄 重置房间数据</button>
+                    <button onclick="copyRoomLink()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 py-2 rounded font-semibold">📋 复制房间链接</button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <!-- 2. 当前房间控制 -->
-                <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200 flex flex-col justify-between">
-                    <span class="text-[11px] font-bold text-slate-700 mb-1.5 block">📌 当前房间操作</span>
-                    <div class="space-y-1">
-                        <button onclick="resetCurrentRoomData()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded py-1 px-2 text-[10px] font-semibold transition text-left flex items-center gap-1.5">
-                            <i class="fa-solid fa-trash-arrow-up"></i>
-                            <span>🔄 重置当前房间数据</span>
-                        </button>
-                        <button onclick="copyRoomLink()" class="w-full bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 rounded py-1 px-2 text-[10px] transition text-left flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-link"></i>
-                            <span>📋 复制当前房间链接</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 3. 管理员密码修改 -->
-                <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
-                    <span class="text-[11px] font-bold text-slate-700 mb-1.5 block">🔑 修改管理员密码</span>
-                    <div class="space-y-1.5">
-                        <input type="text" id="new-admin-pwd" placeholder="输入新的管理员密码" class="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[10px] text-slate-800 focus:outline-none focus:border-indigo-500 shadow-sm">
-                        <button onclick="changeAdminPassword()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1 px-2 rounded text-[10px] shadow-sm transition">
-                            确认修改密码
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. 角色密码查看 & 重置 -->
-            <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
-                <span class="text-[11px] font-bold text-slate-700 mb-1.5 block">👥 角色密码管理</span>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
-                    <!-- 律师 -->
-                    <div class="bg-white p-2 rounded border border-slate-200 space-y-1 shadow-sm">
-                        <div class="flex justify-between items-center text-blue-600 font-bold">
-                            <span>👨‍⚖️ 律师密码</span>
-                            <span id="pwd-val-lawyer" class="text-slate-500 font-mono">******</span>
-                        </div>
-                        <div class="flex gap-1">
-                            <button onclick="revealRolePwd('lawyer')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex items-center justify-center">
-                                <i class="fa-solid fa-eye text-[9px]"></i>
-                            </button>
-                            <button onclick="adminModifyRolePwd('lawyer')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex-1">
-                                修改密码
-                            </button>
-                            <button onclick="adminResetRolePwd('lawyer')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200 font-semibold">
-                                重置
-                            </button>
-                        </div>
-                    </div>
-                    <!-- 程序员 -->
-                    <div class="bg-white p-2 rounded border border-slate-200 space-y-1 shadow-sm">
-                        <div class="flex justify-between items-center text-emerald-600 font-bold">
-                            <span>👨‍💻 程序员密码</span>
-                            <span id="pwd-val-coder" class="text-slate-500 font-mono">******</span>
-                        </div>
-                        <div class="flex gap-1">
-                            <button onclick="revealRolePwd('coder')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex items-center justify-center">
-                                <i class="fa-solid fa-eye text-[9px]"></i>
-                            </button>
-                            <button onclick="adminModifyRolePwd('coder')" class="bg-slate-50 hover:bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-600 flex-1">
-                                修改密码
-                            </button>
-                            <button onclick="adminResetRolePwd('coder')" class="bg-rose-50 hover:bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded border border-rose-200 font-semibold">
-                                重置
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. 角色密码验证弹窗 -->
-    <div id="role-auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">🔐</span>
-                <h4 class="font-bold text-slate-800 text-sm">角色密码验证</h4>
-            </div>
-            <div>
-                <label class="block text-[11px] text-slate-500 mb-1.5">请输入该角色的操作密码：</label>
-                <input type="password" id="role-auth-input" placeholder="输入密码完成验证" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
-            </div>
-            <div class="flex justify-end gap-2 text-xs pt-1">
-                <button onclick="closeModal('role-auth-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
-                <button onclick="submitRoleVerification()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 6. 房间设置弹窗 -->
-    <div id="room-init-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">🏠</span>
-                <h4 class="font-bold text-slate-800 text-sm">房间设置</h4>
-            </div>
-            <p class="text-xs text-slate-500 leading-relaxed">
-                两个人输入相同的房间号，即可进入同一个房间进行实时博弈同步对战。
-            </p>
-            <div>
-                <input type="text" id="target-room-id" placeholder="输入一个你想进入或创建的房间名" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
-            </div>
-            <div class="flex justify-between items-center text-xs pt-1">
-                <button onclick="closeModal('room-init-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+            <div class="border-t border-slate-100 pt-3 space-y-2">
+                <span class="font-bold text-slate-700 block">🔑 修改全局管理员密码</span>
                 <div class="flex gap-2">
-                    <button onclick="generateRandomRoom()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border border-slate-200">🎲 随机新房间</button>
-                    <button onclick="joinRoomByInput()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">进入</button>
+                    <input type="password" id="new-admin-pwd" placeholder="请输入新密码" class="flex-1 bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+                    <button onclick="submitChangeAdminPassword()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 rounded">确认修改</button>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 pt-3 space-y-2">
+                <span class="font-bold text-slate-700 block">👥 角色密码覆盖控制</span>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50/50 p-2.5 rounded border border-blue-100 space-y-1.5">
+                        <span class="font-semibold text-blue-800">👨‍⚖️ 律师密码管理</span>
+                        <input type="password" id="admin-lawyer-pwd" class="w-full bg-white border border-slate-200 rounded p-1" placeholder="******">
+                        <div class="flex gap-1.5 text-[10px]">
+                            <button onclick="adminSetRolePwd('lawyer')" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-1 rounded">修改</button>
+                            <button onclick="adminResetRolePwd('lawyer')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-1 rounded">重置清除</button>
+                        </div>
+                    </div>
+                    <div class="bg-emerald-50/50 p-2.5 rounded border border-emerald-100 space-y-1.5">
+                        <span class="font-semibold text-emerald-800">👨‍💻 程序员密码管理</span>
+                        <input type="password" id="admin-coder-pwd" class="w-full bg-white border border-slate-200 rounded p-1" placeholder="******">
+                        <div class="flex gap-1.5 text-[10px]">
+                            <button onclick="adminSetRolePwd('coder')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-1 rounded">修改</button>
+                            <button onclick="adminResetRolePwd('coder')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 py-1 rounded">重置清除</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 7. 导出弹窗 -->
-    <div id="export-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">📋</span>
-                <h4 class="font-bold text-slate-800 text-sm">导出房间数据</h4>
-            </div>
-            <p class="text-xs text-slate-500">
-                复制下方加密后的数据文本，可以在新的浏览器或新版本中导入，无缝迁移所有游戏进度。
-            </p>
-            <textarea id="export-textarea" readonly class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg text-[10px] p-2 text-slate-500 font-mono focus:outline-none custom-scrollbar"></textarea>
-            <div class="flex justify-end gap-2 text-xs pt-1">
-                <button onclick="closeModal('export-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">关闭</button>
-                <button onclick="copyExportedText()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm flex items-center gap-1">
-                    <i class="fa-solid fa-copy"></i>
-                    <span>一键复制</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 8. 导入弹窗 -->
-    <div id="import-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">📥</span>
-                <h4 class="font-bold text-slate-800 text-sm">导入房间数据</h4>
-            </div>
-            <p class="text-xs text-slate-500">
-                在下方粘贴先前导出的加密数据文本，覆盖导入将覆盖该房间下的所有对局。
-            </p>
-            <textarea id="import-textarea" placeholder="在此粘贴导出的加密文本字符串..." class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg text-[10px] p-2 text-slate-700 font-mono focus:outline-none focus:border-indigo-500 custom-scrollbar"></textarea>
-            <p class="text-[10px] text-amber-600 font-medium">⚠️ 警告：导入操作是覆盖式的且无法撤销，导入前请确保数据格式正确。</p>
-            <div class="flex justify-end gap-2 text-xs pt-1">
-                <button onclick="closeModal('import-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
-                <button onclick="submitImport()" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认导入</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 9. 设置角色密码 -->
-    <div id="set-pwd-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl">
-            <div class="flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                <span class="text-base">🔑</span>
-                <h4 class="font-bold text-slate-800 text-sm" id="set-pwd-title">设置角色密码</h4>
-            </div>
-            <p class="text-[11px] text-slate-500 leading-relaxed">密码生效后，本端进行任何消耗该角色CP或使用技能的操作，都会验证该密码，防止对方冒充篡改。</p>
+    <!-- 弹窗：角色写操作密码校验机制 -->
+    <div id="role-auth-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">🔐 角色操作密码校验</h4>
             <div>
-                <input type="text" id="set-pwd-input" placeholder="输入你要设置的该角色密码" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+                <label class="block text-slate-500 mb-1.5">请输入该角色的独立操作密码：</label>
+                <input type="password" id="role-pwd-auth-input" placeholder="请输入密码进行拦截验证" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:outline-none focus:border-indigo-500">
             </div>
-            <div class="flex justify-end gap-2 text-xs pt-1">
-                <button onclick="closeModal('set-pwd-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
-                <button onclick="submitRolePassword()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">确认密码</button>
+            <div class="flex justify-end gap-2 pt-1">
+                <button onclick="closeModal('role-auth-modal')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitRoleAuth()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-1.5 rounded-lg shadow-sm">验证确认</button>
             </div>
         </div>
     </div>
 
-    <!-- ==================== 前端逻辑核心 ==================== -->
-    <script>
-        // 初始化 Firebase 配置（此处使用公共默认数据库）
-        const firebaseConfig = {
-            databaseURL: "https://game-theory-v3-default-rtdb.firebaseio.com"
-        };
-        
-        // 尝试初始化
-        if (firebase.apps.length === 0) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.database();
-
-        // 基础运行状态变量
-        let currentRoom = "PublicDefaultRoom";
-        let localRole = null; // 当前本地选定的身份: 'lawyer' | 'coder' | null
-        let localPasswords = {
-            lawyer: localStorage.getItem('pwd_lawyer_local') || "",
-            coder: localStorage.getItem('pwd_coder_local') || ""
-        };
-        
-        let pendingAction = null; // 待确认或通过密码验证后触发的操作
-        let currentDbState = null; // 同步的最新的状态快照
-
-        // 工具函数：获取当前时间戳
-        const getNow = () => Date.now();
-
-        // 获取房间ID
-        function initRoom() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const rId = urlParams.get('room');
-            if (rId && rId.trim() !== "") {
-                currentRoom = rId.trim();
-                document.getElementById('room-display').innerText = "房间: " + currentRoom;
-                startRoomSync();
-            } else {
-                openRoomModal();
-            }
-        }
-
-        function startRoomSync() {
-            // 开始实时监听当前房间数据
-            db.ref("rooms/" + currentRoom).on("value", (snapshot) => {
-                const data = snapshot.val();
-                if (!data) {
-                    // 初始化一个空房间数据结构
-                    initRoomDefaultData();
-                } else {
-                    currentDbState = data;
-                    renderGame(data);
-                }
-            });
-            updateStatusText("已连接，数据已同步");
-        }
-
-        // 初始化一局默认游戏数据
-        function initRoomDefaultData() {
-            const initialData = {
-                roomName: currentRoom,
-                createdAt: getNow(),
-                adminPassword: "8868",
-                game: {
-                    lawyer: { cp: 0, pwd: "", skillCooldown: 0 },
-                    coder: { cp: 0, pwd: "", skillCooldown: 0 },
-                    turn: "lawyer",
-                    lastActionTime: getNow(),
-                    gameStatus: "🎉 新一局游戏开始！"
-                },
-                todos: {},
-                logs: {},
-                history: [] // 留着给撤销回滚
-            };
-            // 写入日志
-            const logId = db.ref().push().key;
-            initialData.logs[logId] = {
-                time: getNow(),
-                text: "新房间创建并开启新战局"
-            };
-            db.ref("rooms/" + currentRoom).set(initialData);
-        }
-
-        // 状态文字更新
-        function updateStatusText(text) {
-            const el = document.getElementById('conn-status');
-            const txt = document.getElementById('room-display');
-            txt.innerText = "房间: " + currentRoom;
-            el.className = "flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded border border-emerald-200";
-            // 指示灯变绿
-            el.firstElementChild.className = "w-1.5 h-1.5 rounded-full bg-emerald-500";
-        }
-
-        // 折叠和展开游戏规则
-        function toggleRules() {
-            const panel = document.getElementById('rules-panel');
-            const arrow = document.getElementById('rule-btn-arrow');
-            const txt = document.getElementById('rule-btn-txt');
-            if (panel.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-                arrow.className = "fa-solid fa-chevron-up text-[10px]";
-                txt.innerText = "V3.5.3 收起";
-            } else {
-                panel.classList.add('hidden');
-                arrow.className = "fa-solid fa-chevron-down text-[10px]";
-                txt.innerText = "📖 游戏规则";
-            }
-        }
-
-        // 渲染对局主体界面
-        function renderGame(data) {
-            if (!data || !data.game) return;
-            const game = data.game;
-            
-            // CP 点数
-            document.getElementById('cp-lawyer').innerText = game.lawyer.cp;
-            document.getElementById('cp-coder').innerText = game.coder.cp;
-
-            // 回合状态
-            const turnBadge = document.getElementById('turn-badge');
-            if (game.turn === 'lawyer') {
-                turnBadge.innerText = "律师";
-                turnBadge.className = "bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold border border-blue-100";
-            } else {
-                turnBadge.innerText = "程序员";
-                turnBadge.className = "bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded font-bold border border-emerald-100";
-            }
-
-            document.getElementById('game-status-text').innerText = game.gameStatus || "对决中...";
-
-            // 角色密码状态渲染
-            renderRolePwdState('lawyer', game.lawyer.pwd);
-            renderRolePwdState('coder', game.coder.pwd);
-
-            // 本地选中框的高亮标记
-            updateRoleUISelection();
-
-            // 技能冷却倒计时处理
-            processCooldowns(game.lawyer.skillCooldown, game.coder.skillCooldown);
-
-            // 撤销步数限制渲染
-            const undoCount = data.history ? Object.keys(data.history).length : 0;
-            document.getElementById('undo-count').innerText = Math.min(undoCount, 3);
-
-            // 渲染待办命令
-            renderTodos(data.todos);
-
-            // 渲染日志
-            renderLogs(data.logs);
-        }
-
-        // 渲染单个角色密码锁的状态（一次性生效后置灰）
-        function renderRolePwdState(role, cloudPwd) {
-            const btn = document.getElementById(`set-pwd-${role}-btn`);
-            const stateText = document.getElementById(`pwd-state-${role}`);
-            
-            if (cloudPwd && cloudPwd.trim() !== "") {
-                // 已生效置灰
-                btn.disabled = true;
-                btn.className = "text-[10px] text-slate-400 flex items-center gap-0.5 mt-0.5 cursor-not-allowed";
-                stateText.innerText = "🔐 密码已锁定生效";
-            } else {
-                // 未设置
-                btn.disabled = false;
-                if (role === 'lawyer') {
-                    btn.className = "text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 mt-0.5";
-                } else {
-                    btn.className = "text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5 mt-0.5";
-                }
-                stateText.innerText = "🔓 当前角色未设置密码";
-            }
-        }
-
-        // 更新客户端选择角色的外边框高亮
-        function updateRoleUISelection() {
-            const lawyerBox = document.getElementById('role-box-lawyer');
-            const coderBox = document.getElementById('role-box-coder');
-            const lawyerBtn = document.getElementById('role-select-lawyer');
-            const coderBtn = document.getElementById('role-select-coder');
-
-            if (localRole === 'lawyer') {
-                lawyerBox.className = "bg-white border-2 border-blue-500 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-md";
-                coderBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden opacity-60 shadow-sm";
-                lawyerBtn.innerText = "⭐ 我是律师";
-                lawyerBtn.className = "bg-blue-600 text-white text-xs px-2.5 py-1 rounded-lg border border-blue-500 shadow-sm";
-                coderBtn.innerText = "选择我是程序员";
-                coderBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
-            } else if (localRole === 'coder') {
-                lawyerBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden opacity-60 shadow-sm";
-                coderBox.className = "bg-white border-2 border-emerald-500 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-md";
-                lawyerBtn.innerText = "选择我是律师";
-                lawyerBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
-                coderBtn.innerText = "⭐ 我是程序员";
-                coderBtn.className = "bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-lg border border-emerald-500 shadow-sm";
-            } else {
-                lawyerBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm";
-                coderBox.className = "bg-white border-2 border-slate-200 rounded-2xl p-4 transition-all duration-300 relative overflow-hidden shadow-sm";
-                lawyerBtn.innerText = "选择我是律师";
-                lawyerBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
-                coderBtn.innerText = "选择我是程序员";
-                coderBtn.className = "bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-200 transition";
-            }
-        }
-
-        // 本地切换选择自己的身份
-        function selectRole(role) {
-            if (localRole === role) {
-                localRole = null; // 反选
-            } else {
-                localRole = role;
-            }
-            updateRoleUISelection();
-        }
-
-        // 渲染待执行指令
-        function renderTodos(todos) {
-            const listEl = document.getElementById('todo-list');
-            const countEl = document.getElementById('todo-count');
-            
-            if (!todos) {
-                listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">暂无待执行命令</p>`;
-                countEl.innerText = "0";
-                return;
-            }
-
-            const todoKeys = Object.keys(todos);
-            countEl.innerText = todoKeys.length;
-
-            let html = "";
-            todoKeys.sort((a, b) => todos[b].time - todos[a].time).forEach(key => {
-                const todo = todos[key];
-                const isLoan = todo.type === "loan";
-                const borderClass = isLoan ? "border-amber-200 bg-amber-50/50" : "border-indigo-100 bg-slate-50/50";
-                const typeBadge = isLoan 
-                    ? `<span class="bg-amber-50 text-amber-600 text-[9px] px-1.5 py-0.2 rounded border border-amber-200">🏦 贷款待办</span>` 
-                    : `<span class="bg-indigo-50 text-indigo-600 text-[9px] px-1.5 py-0.2 rounded border border-indigo-200">${todo.level}级指令</span>`;
-                
-                // 判断谁来勾选确认完成
-                let checkerText = "";
-                let actionBtn = "";
-
-                if (isLoan) {
-                    // 贷款：借钱者自领指令，由对方确认你做完了
-                    checkerText = `<span class="text-[10px] text-slate-500">由 <strong>${todo.sender === 'lawyer' ? '程序员' : '律师'}</strong> 勾选确认</span>`;
-                    actionBtn = `
-                        <button onclick="confirmTodoComplete('${key}')" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold text-[10.5px] px-2.5 py-1 rounded shadow-sm transition shrink-0">
-                            确认对方已做
-                        </button>
-                    `;
-                } else {
-                    // 普通命令：下达者发给对方做，由接收方确认完成
-                    const receiver = todo.sender === "lawyer" ? "coder" : "lawyer";
-                    checkerText = `<span class="text-[10px] text-slate-500">请 <strong>${receiver === 'lawyer' ? '律师' : '程序员'}</strong> 确认完成</span>`;
-                    actionBtn = `
-                        <button onclick="confirmTodoComplete('${key}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[10.5px] px-2.5 py-1 rounded shadow-sm transition shrink-0">
-                            我已完成
-                        </button>
-                    `;
-                }
-
-                html += `
-                    <div class="border ${borderClass} rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
-                        <div class="space-y-1 flex-1 min-w-[200px]">
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                ${typeBadge}
-                                <span class="text-[10px] text-slate-400">来自 ${todo.sender === 'lawyer' ? '律师' : '程序员'}</span>
-                                ${checkerText}
-                            </div>
-                            <p class="text-slate-800 font-medium">${todo.text}</p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            ${actionBtn}
-                        </div>
-                    </div>
-                `;
-            });
-
-            listEl.innerHTML = html;
-        }
-
-        // 渲染战斗日志
-        function renderLogs(logs) {
-            const container = document.getElementById('logs-container');
-            if (!logs) {
-                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">新一局游戏正在酝酿...</p>`;
-                return;
-            }
-
-            const keys = Object.keys(logs);
-            let html = "";
-            keys.sort((a, b) => logs[b].time - logs[a].time).forEach(k => {
-                const log = logs[k];
-                const dateStr = new Date(log.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                html += `
-                    <div class="flex items-start gap-1.5 text-[11px] leading-relaxed py-0.5 border-b border-slate-100">
-                        <span class="text-slate-400 font-mono shrink-0">${dateStr}</span>
-                        <span class="text-slate-600">${log.text}</span>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        // ==================== 专属技能冷却计时器 ====================
-        let lawyerCooldownTimer = null;
-        let coderCooldownTimer = null;
-
-        function processCooldowns(lawyerTime, coderTime) {
-            const now = getNow();
-            
-            // 律师冷却
-            if (lawyerTime && lawyerTime > now) {
-                document.getElementById('cooldown-container-lawyer').classList.remove('hidden');
-                document.getElementById('skill-lawyer-btn').disabled = true;
-                document.getElementById('skill-lawyer-btn').className = "bg-slate-100 text-slate-400 text-[11px] px-2.5 py-0.5 rounded cursor-not-allowed border border-slate-200";
-                runTimer('lawyer', lawyerTime);
-            } else {
-                document.getElementById('cooldown-container-lawyer').classList.add('hidden');
-                document.getElementById('skill-lawyer-btn').disabled = false;
-                document.getElementById('skill-lawyer-btn').className = "bg-blue-600 hover:bg-blue-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition";
-                if (lawyerCooldownTimer) clearInterval(lawyerCooldownTimer);
-            }
-
-            // 程序员冷却
-            if (coderTime && coderTime > now) {
-                document.getElementById('cooldown-container-coder').classList.remove('hidden');
-                document.getElementById('skill-coder-btn').disabled = true;
-                document.getElementById('skill-coder-btn').className = "bg-slate-100 text-slate-400 text-[11px] px-2.5 py-0.5 rounded cursor-not-allowed border border-slate-200";
-                runTimer('coder', coderTime);
-            } else {
-                document.getElementById('cooldown-container-coder').classList.add('hidden');
-                document.getElementById('skill-coder-btn').disabled = false;
-                document.getElementById('skill-coder-btn').className = "bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] px-2.5 py-0.5 rounded shadow-sm transition";
-                if (coderCooldownTimer) clearInterval(coderCooldownTimer);
-            }
-        }
-
-        function runTimer(role, endTime) {
-            if (role === 'lawyer') {
-                if (lawyerCooldownTimer) clearInterval(lawyerCooldownTimer);
-                lawyerCooldownTimer = setInterval(() => {
-                    const rem = endTime - getNow();
-                    if (rem <= 0) {
-                        clearInterval(lawyerCooldownTimer);
-                        db.ref(`rooms/${currentRoom}/game/lawyer/skillCooldown`).set(0);
-                    } else {
-                        const formatted = formatMs(rem);
-                        document.getElementById('cooldown-time-lawyer').innerText = formatted;
-                        const pct = Math.max(0, Math.min(100, (rem / 86400000) * 100));
-                        document.getElementById('cooldown-bar-lawyer').style.width = pct + "%";
-                    }
-                }, 1000);
-            } else {
-                if (coderCooldownTimer) clearInterval(coderCooldownTimer);
-                coderCooldownTimer = setInterval(() => {
-                    const rem = endTime - getNow();
-                    if (rem <= 0) {
-                        clearInterval(coderCooldownTimer);
-                        db.ref(`rooms/${currentRoom}/game/coder/skillCooldown`).set(0);
-                    } else {
-                        const formatted = formatMs(rem);
-                        document.getElementById('cooldown-time-coder').innerText = formatted;
-                        const pct = Math.max(0, Math.min(100, (rem / 86400000) * 100));
-                        document.getElementById('cooldown-bar-coder').style.width = pct + "%";
-                    }
-                }, 1000);
-            }
-        }
-
-        function formatMs(ms) {
-            const secs = Math.floor(ms / 1000);
-            const hrs = Math.floor(secs / 3600);
-            const mins = Math.floor((secs % 3600) / 60);
-            const remSecs = secs % 60;
-            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${remSecs.toString().padStart(2, '0')}`;
-        }
-
-        // ==================== 角色密码保护验证机制 ====================
-        function secureExecute(role, actionCallback) {
-            if (!currentDbState || !currentDbState.game) return;
-            const targetRoleData = currentDbState.game[role];
-            
-            // 检查云端是否给该角色设置了密码
-            if (targetRoleData && targetRoleData.pwd && targetRoleData.pwd.trim() !== "") {
-                const savedPwd = localPasswords[role];
-                if (savedPwd === targetRoleData.pwd) {
-                    actionCallback();
-                } else {
-                    pendingAction = { role: role, callback: actionCallback };
-                    openModal('role-auth-modal');
-                }
-            } else {
-                actionCallback();
-            }
-        }
-
-        function submitRoleVerification() {
-            const val = document.getElementById('role-auth-input').value;
-            if (!val || val.trim() === "") {
-                alert("请输入验证密码！");
-                return;
-            }
-            if (!pendingAction) return;
-            
-            const cloudPwd = currentDbState.game[pendingAction.role].pwd;
-            if (val === cloudPwd) {
-                localPasswords[pendingAction.role] = val;
-                localStorage.setItem(`pwd_${pendingAction.role}_local`, val);
-                closeModal('role-auth-modal');
-                
-                const act = pendingAction.callback;
-                pendingAction = null;
-                act();
-            } else {
-                alert("密码错误，操作遭拒绝！");
-            }
-        }
-
-        // 设置角色自己的操作密码
-        let setPwdRoleTarget = null;
-        function openSetPasswordModal(role) {
-            setPwdRoleTarget = role;
-            document.getElementById('set-pwd-title').innerText = `设置${role === 'lawyer' ? '律师' : '程序员'}的操作密码`;
-            document.getElementById('set-pwd-input').value = "";
-            openModal('set-pwd-modal');
-        }
-
-        function submitRolePassword() {
-            const val = document.getElementById('set-pwd-input').value;
-            if (!val || val.trim() === "") {
-                alert("密码不能为空！");
-                return;
-            }
-            if (!setPwdRoleTarget) return;
-
-            backupCurrentState();
-
-            db.ref(`rooms/${currentRoom}/game/${setPwdRoleTarget}/pwd`).set(val).then(() => {
-                localPasswords[setPwdRoleTarget] = val;
-                localStorage.setItem(`pwd_${setPwdRoleTarget}_local`, val);
-                addLog(`👨‍⚖️ ${setPwdRoleTarget === 'lawyer' ? '律师' : '程序员'} 设置了独立操作密码，状态已锁定。`);
-                closeModal('set-pwd-modal');
-            });
-        }
-
-        // ==================== 核心博弈操作 ====================
-        
-        // 1. 打赌获胜
-        function openBetModal() {
-            if (!localRole) {
-                alert("请先在下方身份板勾选选择你是：律师 还是 程序员！");
-                return;
-            }
-            document.getElementById('bet-text').value = "";
-            openModal('bet-modal');
-        }
-
-        function submitBet() {
-            const text = document.getElementById('bet-text').value;
-            if (!text || text.trim() === "") {
-                alert("请输入打赌的具体惩罚内容！");
-                return;
-            }
-            
-            secureExecute(localRole, () => {
-                backupCurrentState();
-                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
-                const currentCp = currentDbState.game[localRole].cp || 0;
-                
-                const updates = {};
-                updates[`/game/${localRole}/cp`] = currentCp + 1;
-                updates[`/game/turn`] = localRole;
-                updates[`/game/gameStatus`] = `🏆 打赌结果出炉，${roleName}胜出！`;
-
-                db.ref(`rooms/${currentRoom}`).update(updates);
-                addLog(`🏆 ${roleName} 赢下了打赌，获得 +1 CP。赌注内容：${text}`);
-                closeModal('bet-modal');
-            });
-        }
-
-        // 2. 银行贷款
-        function openLoanModal() {
-            if (!localRole) {
-                alert("请先勾选你的身份再进行贷款！");
-                return;
-            }
-            document.getElementById('loan-text').value = "";
-            openModal('loan-modal');
-        }
-
-        function submitLoan() {
-            const text = document.getElementById('loan-text').value;
-            if (!text || text.trim() === "") {
-                alert("贷款必须提供作为抵押要完成的命令内容！");
-                return;
-            }
-
-            const levelVal = document.querySelector('input[name="loan-lv"]:checked').value;
-            let loanCp = 1;
-            if (levelVal === "2") loanCp = 2;
-            if (levelVal === "3") loanCp = 4;
-
-            secureExecute(localRole, () => {
-                backupCurrentState();
-                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
-                const currentCp = currentDbState.game[localRole].cp || 0;
-
-                const updates = {};
-                updates[`/game/${localRole}/cp`] = currentCp + loanCp;
-                updates[`/game/gameStatus`] = `🏦 银行向${roleName}发放了 ${loanCp} CP 贷款`;
-
-                const todoKey = db.ref(`rooms/${currentRoom}/todos`).push().key;
-                const newTodo = {
-                    type: "loan",
-                    sender: localRole,
-                    level: levelVal,
-                    text: `【贷款抵押】${text}`,
-                    time: getNow()
-                };
-                updates[`/todos/${todoKey}`] = newTodo;
-
-                db.ref(`rooms/${currentRoom}`).update(updates);
-                
-                addLog(`🏦 ${roleName} 向银行成功抵押贷款，获得 +${loanCp} CP。生成了需自行完成的抵押命令：${text}`);
-                closeModal('loan-modal');
-            });
-        }
-
-        // 3. All in 通吃
-        function triggerAllIn() {
-            if (!localRole) {
-                alert("请先选择你的角色身份！");
-                return;
-            }
-            const myCp = currentDbState.game[localRole].cp || 0;
-            if (myCp <= 0) {
-                alert("你的 CP 点数已为 0，无法发起 All in 狂热博弈！");
-                return;
-            }
-
-            secureExecute(localRole, () => {
-                const targetRole = localRole === 'lawyer' ? 'coder' : 'lawyer';
-                const targetCp = currentDbState.game[targetRole].cp || 0;
-                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
-
-                if (confirm(`⚠️ 狂热博弈：你将消耗身上全部 ${myCp} 点 CP，如果发起成功，将可以夺取对方同等数量的CP（对方不小于此数）。是否继续？`)) {
-                    backupCurrentState();
-                    
-                    const updates = {};
-                    updates[`/game/${localRole}/cp`] = 0;
-                    updates[`/game/gameStatus`] = `🔥 ${roleName} 发起了 All in 豪赌`;
-
-                    const todoKey = db.ref(`rooms/${currentRoom}/todos`).push().key;
-                    const newTodo = {
-                        type: "allin",
-                        sender: localRole,
-                        level: "Allin",
-                        text: `【All in 夺取确认】我自废全部 ${myCp} CP，需对方确认并夺取对方 ${Math.min(myCp, targetCp)} 点 CP 注入我方。`,
-                        time: getNow()
-                    };
-                    updates[`/todos/${todoKey}`] = newTodo;
-
-                    db.ref(`rooms/${currentRoom}`).update(updates);
-                    addLog(`🔥 ${roleName} 破釜沉舟，宣布消耗全部 ${myCp} CP 发起 All in，需对方确认后，将掠夺对方 ${Math.min(myCp, targetCp)} CP。`);
-                }
-            });
-        }
-
-        // 4. 下达普通命令
-        function dispatchCommand() {
-            if (!localRole) {
-                alert("请先选择你的角色身份！");
-                return;
-            }
-            const text = document.getElementById('cmd-text').value;
-            if (!text || text.trim() === "") {
-                alert("下达命令内容不能为空！");
-                return;
-            }
-
-            const levelVal = document.querySelector('input[name="cmd-lv"]:checked').value;
-            let cost = 1;
-            if (levelVal === "2") cost = 2;
-            if (levelVal === "3") cost = 4;
-
-            secureExecute(localRole, () => {
-                const myCp = currentDbState.game[localRole].cp || 0;
-                if (myCp < cost) {
-                    alert(`CP 点数不足！当前等级命令需要消耗 ${cost} CP，你目前仅剩 ${myCp} CP。`);
-                    return;
-                }
-
-                backupCurrentState();
-                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
-                const targetRole = localRole === 'lawyer' ? 'coder' : 'lawyer';
-
-                const updates = {};
-                updates[`/game/${localRole}/cp`] = myCp - cost;
-                updates[`/game/turn`] = targetRole;
-                updates[`/game/gameStatus`] = `⚡ ${roleName} 对目标发起了 ${levelVal} 级指令`;
-
-                const todoKey = db.ref(`rooms/${currentRoom}/todos`).push().key;
-                const newTodo = {
-                    type: "normal",
-                    sender: localRole,
-                    level: levelVal,
-                    text: text,
-                    time: getNow()
-                };
-                updates[`/todos/${todoKey}`] = newTodo;
-
-                db.ref(`rooms/${currentRoom}`).update(updates).then(() => {
-                    document.getElementById('cmd-text').value = "";
-                });
-
-                addLog(`⚡ ${roleName} 消耗了 ${cost} CP，对对方下达了 ${levelVal} 级命令：${text}`);
-            });
-        }
-
-        // 5. 勾选确认待办命令已完成
-        function confirmTodoComplete(key) {
-            if (!currentDbState || !currentDbState.todos) return;
-            const todo = currentDbState.todos[key];
-            if (!todo) return;
-
-            const isLoan = todo.type === "loan";
-            const isAllin = todo.type === "allin";
-            
-            if (!localRole) {
-                alert("确认完成需要明确你的本地身份，请先在下方勾选选择角色！");
-                return;
-            }
-
-            if (isLoan) {
-                if (localRole === todo.sender) {
-                    alert("贷款命令需要对方确认你完成了，你不能自己勾选！");
-                    return;
-                }
-            } else if (isAllin) {
-                if (localRole === todo.sender) {
-                    alert("All in 夺取需要对方点击确认才能生效！");
-                    return;
-                }
-            } else {
-                if (localRole === todo.sender) {
-                    alert("下达命令的人无法帮你完成，请让执行者（对方）确认点击！");
-                    return;
-                }
-            }
-
-            secureExecute(localRole, () => {
-                backupCurrentState();
-                const roleName = localRole === 'lawyer' ? '律师' : '程序员';
-                
-                const updates = {};
-                updates[`/todos/${key}`] = null;
-
-                if (isAllin) {
-                    const senderRole = todo.sender;
-                    const senderRoleName = senderRole === 'lawyer' ? '律师' : '程序员';
-                    const targetCp = currentDbState.game[localRole].cp || 0;
-                    
-                    updates[`/game/${senderRole}/cp`] = targetCp;
-                    updates[`/game/${localRole}/cp`] = 0;
-                    updates[`/game/gameStatus`] = `🔥 All in博弈尘埃落定！${senderRoleName}通吃了${roleName}`;
-                    
-                    addLog(`🔥 All in通吃成功！${roleName} 确认了豪赌并被掠夺。${senderRoleName} 夺取获得 ${targetCp} CP，${roleName} CP归零！`);
-                } else {
-                    updates[`/game/gameStatus`] = `✅ 指令执行完毕`;
-                    addLog(`✅ ${roleName} 勾选消除了命令待办：${todo.text}`);
-                }
-
-                db.ref(`rooms/${currentRoom}`).update(updates);
-            });
-        }
-
-        // ==================== 专属大招发动 ====================
-        
-        // 律师：律师函警告
-        function useLawyerSkill() {
-            if (localRole !== 'lawyer') {
-                alert("你当前身份不是律师，无法发动律师大招！");
-                return;
-            }
-
-            secureExecute('lawyer', () => {
-                if (!currentDbState || !currentDbState.todos) {
-                    alert("对方当前没有待处理的命令，技能无目标可撤回！");
-                    return;
-                }
-
-                const todoKeys = Object.keys(currentDbState.todos);
-                const coderCmds = todoKeys
-                    .map(k => ({ key: k, ...currentDbState.todos[k] }))
-                    .filter(t => t.sender === 'coder' && t.type === 'normal')
-                    .sort((a, b) => b.time - a.time);
-
-                if (coderCmds.length === 0) {
-                    alert("找不到由程序员下达的待执行普通命令，无法发出律师函！");
-                    return;
-                }
-
-                backupCurrentState();
-                const targetCmd = coderCmds[0];
-                let cost = 1;
-                if (targetCmd.level === "2") cost = 2;
-                if (targetCmd.level === "3") cost = 4;
-
-                const currentCoderCp = currentDbState.game.coder.cp || 0;
-
-                const updates = {};
-                updates[`/todos/${targetCmd.key}`] = null;
-                updates[`/game/coder/cp`] = currentCoderCp + cost;
-                updates[`/game/lawyer/skillCooldown`] = getNow() + 86400000;
-                updates[`/game/gameStatus`] = `🛡️ 律师函生效！成功撤销撤销程序员指令`;
-
-                db.ref(`rooms/${currentRoom}`).update(updates);
-                addLog(`🛡️ 律师 发动了大招【律师函警告】！强行撤消了程序员的指令【${targetCmd.text}】，并全额返还了其消耗的 ${cost} CP！`);
-            });
-        }
-
-        // 程序员：致命 Bug
-        function useCoderSkill() {
-            if (localRole !== 'coder') {
-                alert("你当前身份不是程序员，无法发动致命 Bug！");
-                return;
-            }
-
-            secureExecute('coder', () => {
-                const lawyerCp = currentDbState.game.lawyer.cp || 0;
-                if (lawyerCp <= 0) {
-                    alert("律师当前 CP 点数已经为 0，发动 Bug 不起任何作用！");
-                    return;
-                }
-
-                backupCurrentState();
-                const deduct = Math.max(1, Math.round(lawyerCp * 0.3));
-                const newLawyerCp = Math.max(0, lawyerCp - deduct);
-
-                const updates = {};
-                updates[`/game/lawyer/cp`] = newLawyerCp;
-                updates[`/game/coder/skillCooldown`] = getNow() + 86400000;
-                updates[`/game/gameStatus`] = `👾 致命Bug爆发！律师被扣除CP`;
-
-                db.ref(`rooms/${currentRoom}`).update(updates);
-                addLog(`👾 程序员 触发了程序员【致命Bug】！突袭成功，强行扣除律师 ${deduct} 点 CP（30%），并进入24小时冷却。`);
-            });
-        }
-
-        // ==================== 撤销历史核心逻辑 ====================
-        function backupCurrentState() {
-            if (!currentDbState) return;
-            const backup = {
-                game: JSON.parse(JSON.stringify(currentDbState.game)),
-                todos: currentDbState.todos ? JSON.parse(JSON.stringify(currentDbState.todos)) : {},
-                time: getNow()
-            };
-
-            let history = currentDbState.history ? Object.values(currentDbState.history) : [];
-            history.push(backup);
-            if (history.length > 3) {
-                history.shift();
-            }
-
-            db.ref(`rooms/${currentRoom}/history`).set(history);
-        }
-
-        function triggerUndo() {
-            if (!currentDbState || !currentDbState.history) {
-                alert("暂无可撤销的历史记录！");
-                return;
-            }
-
-            const historyList = Object.values(currentDbState.history);
-            if (historyList.length === 0) {
-                alert("已退回到最远可挽回的回合！");
-                return;
-            }
-
-            if (confirm("🔄 你是否确定要回滚撤销上一步操作？")) {
-                const prev = historyList.pop();
-
-                const updates = {
-                    game: prev.game,
-                    todos: prev.todos || {},
-                    history: historyList
-                };
-
-                db.ref(`rooms/${currentRoom}`).update(updates);
-                addLog(`🔄 系统执行了历史撤销：回滚了上一步操作。`);
-            }
-        }
-
-        // ==================== 辅助公共功能 ====================
-        function addLog(text) {
-            const key = db.ref(`rooms/${currentRoom}/logs`).push().key;
-            db.ref(`rooms/${currentRoom}/logs/${key}`).set({
-                time: getNow(),
-                text: text
-            });
-        }
-
-        // 一键复制专属对决链接
-        function copyRoomLink() {
-            const path = window.location.origin + window.location.pathname + "?room=" + currentRoom;
-            navigator.clipboard.writeText(path).then(() => {
-                alert("📋 房间专属链接复制成功！发给另一位玩家进入即可对决：\n" + path);
-            }).catch(err => {
-                alert("复制失败，请手动复制浏览器地址栏链接。");
-            });
-        }
-
-        // ==================== 弹窗管理器 ====================
-        function openModal(id) {
-            document.getElementById(id).classList.remove('hidden');
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-
-        function openRoomModal() {
-            document.getElementById('target-room-id').value = currentRoom;
-            openModal('room-init-modal');
-        }
-
-        function generateRandomRoom() {
-            const rand = "Room_" + Math.floor(Math.random() * 89999 + 10000);
-            document.getElementById('target-room-id').value = rand;
-        }
-
-        function joinRoomByInput() {
-            const val = document.getElementById('target-room-id').value;
-            if (!val || val.trim() === "") {
-                alert("请输入房间名");
-                return;
-            }
-            window.location.search = `?room=${val.trim()}`;
-        }
-
-        // ==================== 导入 / 导出系统 ====================
-        function openExportModal() {
-            if (!currentDbState) return;
-            const dataStr = JSON.stringify(currentDbState);
-            const encoded = btoa(encodeURIComponent(dataStr));
-            document.getElementById('export-textarea').value = encoded;
-            openModal('export-modal');
-        }
-
-        function copyExportedText() {
-            const val = document.getElementById('export-textarea').value;
-            navigator.clipboard.writeText(val).then(() => {
-                alert("数据已成功复制到剪贴板，妥善保存它吧！");
-                closeModal('export-modal');
-            });
-        }
-
-        function openImportModal() {
-            document.getElementById('import-textarea').value = "";
-            openModal('import-modal');
-        }
-
-        function submitImport() {
-            const val = document.getElementById('import-textarea').value;
-            if (!val || val.trim() === "") {
-                alert("请输入数据内容");
-                return;
-            }
-
-            try {
-                const decoded = decodeURIComponent(atob(val.trim()));
-                const parsed = JSON.parse(decoded);
-                if (!parsed.game || !parsed.adminPassword) {
-                    throw new Error("格式无效");
-                }
-
-                if (confirm("⚠️ 确定要将该导出的数据导入当前房间吗？这会覆盖所有的进度！")) {
-                    db.ref(`rooms/${currentRoom}`).set(parsed).then(() => {
-                        alert("🎉 数据导入并且成功同步更新！");
-                        closeModal('import-modal');
-                    });
-                }
-            } catch (e) {
-                alert("❌ 解析导入数据失败！请确保数据是完整复制导出的加密字串。");
-            }
-        }
-
-        // ==================== 管理设置系统逻辑 ====================
-        let authenticatedAdmin = false;
-
-        function reqAdminAccess() {
-            if (authenticatedAdmin) {
-                openModal('admin-modal');
-                document.getElementById('admin-auth').classList.add('hidden');
-                document.getElementById('admin-content').classList.remove('hidden');
-                refreshRoomList();
-            } else {
-                document.getElementById('admin-pwd-input').value = "";
-                openModal('admin-modal');
-                document.getElementById('admin-auth').classList.remove('hidden');
-                document.getElementById('admin-content').classList.add('hidden');
-            }
-        }
-
-        function verifyAdmin() {
-            const val = document.getElementById('admin-pwd-input').value;
-            const truePwd = currentDbState.adminPassword || "8868";
-
-            if (val === truePwd) {
-                authenticatedAdmin = true;
-                document.getElementById('admin-auth').classList.add('hidden');
-                document.getElementById('admin-content').classList.remove('hidden');
-                refreshRoomList();
-            } else {
-                alert("密码错误，验证失败！");
-            }
-        }
-
-        function refreshRoomList() {
-            const tbody = document.getElementById('rooms-tbody');
-            tbody.innerHTML = `<tr><td colspan="3" class="text-center py-2 text-slate-400 text-[10px]"><i class="fa-solid fa-spinner animate-spin"></i> 加载中...</td></tr>`;
-            
-            db.ref("rooms").once("value", (snapshot) => {
-                const allRooms = snapshot.val();
-                if (!allRooms) {
-                    tbody.innerHTML = `<tr><td colspan="3" class="text-center py-2 text-slate-400 text-[10px]">无房间列表</td></tr>`;
-                    return;
-                }
-
-                let html = "";
-                Object.keys(allRooms).forEach(name => {
-                    const isCurrent = name === currentRoom;
-                    html += `
-                        <tr class="hover:bg-slate-50 text-[10.5px] ${isCurrent ? 'bg-indigo-50/50' : ''}">
-                            <td class="py-1 px-1.5 text-center">
-                                <input type="checkbox" name="room-select-chk" value="${name}" class="accent-indigo-600 text-[10px] transform scale-90">
-                            </td>
-                            <td class="py-1 px-1.5 font-medium truncate max-w-[150px] text-slate-700">
-                                ${name} ${isCurrent ? '<span class="text-[9px] text-indigo-600 bg-indigo-50 px-1 rounded border border-indigo-100">当前</span>' : ''}
-                            </td>
-                            <td class="py-1 px-1.5 text-right space-x-1">
-                                <button onclick="quickJoinRoom('${name}')" class="text-indigo-600 hover:underline" title="切换进入">进入</button>
-                                <button onclick="deleteSingleRoom('${name}')" class="text-rose-600 hover:underline" title="强制删除">删除</button>
-                            </td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = html;
-            });
-        }
-
-        function toggleAllRooms(btn) {
-            const chks = document.querySelectorAll('input[name="room-select-chk"]');
-            let anyUnchecked = false;
-            chks.forEach(c => { if (!c.checked) anyUnchecked = true; });
-
-            chks.forEach(c => {
-                c.checked = anyUnchecked;
-            });
-            btn.innerText = anyUnchecked ? "取消全选" : "全选";
-        }
-
-        function bulkDeleteRooms() {
-            const selected = [];
-            document.querySelectorAll('input[name="room-select-chk"]:checked').forEach(c => {
-                selected.push(c.value);
-            });
-
-            if (selected.length === 0) {
-                alert("未选择任何房间！");
-                return;
-            }
-
-            if (confirm(`⚠️ 危险操作：你确定要批量强行删除选中的 ${selected.length} 个房间的数据吗？此操作无法恢复！`)) {
-                const promises = selected.map(name => db.ref(`rooms/${name}`).remove());
-                Promise.all(promises).then(() => {
-                    alert("批量删除房间完成！");
-                    refreshRoomList();
-                    if (selected.includes(currentRoom)) {
-                        window.location.search = "";
-                    }
-                });
-            }
-        }
-
-        function deleteSingleRoom(name) {
-            if (confirm(`确定要强行抹除房间 [${name}] 的所有对战记录数据吗？`)) {
-                db.ref(`rooms/${name}`).remove().then(() => {
-                    alert("房间已成功移除！");
-                    refreshRoomList();
-                    if (name === currentRoom) {
-                        window.location.search = "";
-                    }
-                });
-            }
-        }
-
-        function quickJoinRoom(name) {
-            window.location.search = `?room=${name}`;
-        }
-
-        function createNewRoom() {
-            const val = document.getElementById('new-room-input').value;
-            if (!val || val.trim() === "") {
-                alert("房间名不可为空！");
-                return;
-            }
-            const rId = val.trim();
-            db.ref(`rooms/${rId}`).once("value", (snap) => {
-                if (snap.exists()) {
-                    alert("该房间号已经存在，不能重复创建！");
-                    return;
-                }
-                
-                const initialData = {
-                    roomName: rId,
-                    createdAt: getNow(),
-                    adminPassword: "8868",
-                    game: {
-                        lawyer: { cp: 0, pwd: "", skillCooldown: 0 },
-                        coder: { cp: 0, pwd: "", skillCooldown: 0 },
-                        turn: "lawyer",
-                        lastActionTime: getNow(),
-                        gameStatus: "🎉 新建房间开始！"
-                    },
-                    todos: {},
-                    logs: {
-                        "init": { time: getNow(), text: `管理员创建了新房间 ${rId}` }
-                    }
-                };
-                db.ref(`rooms/${rId}`).set(initialData).then(() => {
-                    alert("新房间创建完成！");
-                    document.getElementById('new-room-input').value = "";
-                    refreshRoomList();
-                });
-            });
-        }
-
-        function resetCurrentRoomData() {
-            if (confirm("🔄 你真的要重置当前房间的所有CP值、技能冷却、密码锁定和待执行命令吗？")) {
-                backupCurrentState();
-                initRoomDefaultData();
-                alert("当前房间已被完全重置并注入新对局！");
-                closeModal('admin-modal');
-            }
-        }
-
-        function changeAdminPassword() {
-            const val = document.getElementById('new-admin-pwd').value;
-            if (!val || val.trim() === "") {
-                alert("新密码不可为空！");
-                return;
-            }
-            db.ref(`rooms/${currentRoom}/adminPassword`).set(val.trim()).then(() => {
-                alert("管理员授权密码修改成功！");
-                document.getElementById('new-admin-pwd').value = "";
-            });
-        }
-
-        function revealRolePwd(role) {
-            const valEl = document.getElementById(`pwd-val-${role}`);
-            const cloudPwd = currentDbState.game[role].pwd || "";
-            if (valEl.innerText === "******") {
-                valEl.innerText = cloudPwd === "" ? "【无密码】" : cloudPwd;
-            } else {
-                valEl.innerText = "******";
-            }
-        }
-
-        function adminModifyRolePwd(role) {
-            const newPwd = prompt(`【管理员权限】请输入要强制修改 ${role === 'lawyer' ? '律师' : '程序员'} 的新操作密码：`);
-            if (newPwd === null) return;
-            
-            db.ref(`rooms/${currentRoom}/game/${role}/pwd`).set(newPwd).then(() => {
-                alert("该角色密码强制修改成功！");
-                const valEl = document.getElementById(`pwd-val-${role}`);
-                valEl.innerText = "******";
-                addLog(`⚙️ 管理员修改了 ${role === 'lawyer' ? '律师' : '程序员'} 的操作密码。`);
-            });
-        }
-
-        function adminResetRolePwd(role) {
-            if (confirm(`【管理员权限】你确定要重置并清除 ${role === 'lawyer' ? '律师' : '程序员'} 的操作密码吗？重置后，该角色密码锁将被打开且可重新设置。`)) {
-                db.ref(`rooms/${currentRoom}/game/${role}/pwd`).set("").then(() => {
-                    alert("密码重置成功！");
-                    const valEl = document.getElementById(`pwd-val-${role}`);
-                    valEl.innerText = "******";
-                    localPasswords[role] = "";
-                    localStorage.removeItem(`pwd_${role}_local`);
-                    addLog(`⚙️ 管理员强制清除并重置了 ${role === 'lawyer' ? '律师' : '程序员'} 的操作密码锁。`);
-                });
-            }
-        }
-
-        window.onload = function() {
-            initRoom();
-        };
-    </script>
+    <!-- 弹窗：首次进入设置房间 -->
+    <div id="room-init-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden" data-backdrop="static">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">🏠 建立同步连接房间</h4>
+            <p class="text-slate-500 leading-relaxed">
+                双方需要输入相同的房间名以同步当前博弈态势。
+            </p>
+            <div>
+                <input type="text" id="room-id-input" placeholder="输入你想创建或加入的房间号" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-slate-800 focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="submitRoomInit()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 rounded-lg shadow-sm transition">加入对局</button>
+                <button onclick="generateRandomRoom()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 rounded-lg border border-slate-200 font-semibold transition">🎲 随机房间</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：数据导出 -->
+    <div id="export-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">📋 导出房间加密密钥</h4>
+            <textarea id="export-area" readonly class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-[10px] resize-none focus:outline-none"></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('export-modal')" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">关闭</button>
+                <button onclick="copyExportedText()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg shadow-sm">一键复制</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：数据导入 -->
+    <div id="import-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">📥 覆盖导入数据</h4>
+            <p class="text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-lg font-medium leading-relaxed">
+                ⚠️ 警告：覆盖导入将会破坏该房间下的现有数据，该操作不可逆，请知悉！
+            </p>
+            <textarea id="import-area" placeholder="在此粘贴导出的加密密钥" class="w-full h-32 bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-[10px] resize-none focus:outline-none focus:border-indigo-500"></textarea>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('import-modal')" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitImportData()" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-1.5 rounded-lg shadow-sm">覆盖导入</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：设置独立角色安全密码 -->
+    <div id="set-pwd-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs">
+            <h4 class="font-bold text-slate-800 text-sm">🔑 设置独立操作密码</h4>
+            <p class="text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded border border-slate-100">
+                密码为一次性生效，设定后当前浏览器执行任何消耗该角色 CP 或发动技能的操作时需要校验，防止对端恶意操控。
+            </p>
+            <div>
+                <input type="password" id="set-pwd-input" placeholder="输入密码" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:outline-none">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('set-pwd-modal')" class="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg">取消</button>
+                <button onclick="submitSetPassword()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg">确认设置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：AllIn 请求确认弹窗 -->
+    <div id="allin-confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-xl text-xs text-center">
+            <span class="text-3xl">🔥</span>
+            <h4 class="font-bold text-slate-800 text-sm">收到对端 All In 通吃挑战</h4>
+            <p id="allin-confirm-msg" class="text-slate-500 leading-relaxed">
+                对端已自毁所有点数，确认后对方将掠夺你等同于其自毁前的 CP。
+            </p>
+            <div class="flex justify-center gap-2 pt-2">
+                <button onclick="rejectAllIn()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-1.5 rounded-lg">拒绝</button>
+                <button onclick="acceptAllIn()" class="bg-rose-600 hover:bg-rose-500 text-white font-semibold px-5 py-1.5 rounded-lg shadow-sm">同意转移</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 运行组件载入 -->
+    <script src="config.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
